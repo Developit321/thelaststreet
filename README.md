@@ -9,6 +9,7 @@ A survival and community builder set on a single street in a fictional northern 
 ## Contents
 
 - [`docs/game-design-document.md`](docs/game-design-document.md): the full design: setting, systems, story acts, tech, asset pipeline and plan
+- [`docs/prototype-plan.md`](docs/prototype-plan.md): the step-by-step plan for the gameplay prototype
 - [`reference/concept-art/`](reference/concept-art/): AI-generated concept art used as the visual target (internal reference only)
 
 ## Next steps
