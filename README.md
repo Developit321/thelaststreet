@@ -4,7 +4,25 @@
 
 A survival and community builder set on a single street in a fictional northern country around 1900. Build and repair your home, trade with neighbours who remember what you did, and prepare for winters that test every choice.
 
-**Status:** pre-production (planning). Nothing built yet.
+**Status:** gameplay prototype, step 1 of 10 (see [`docs/prototype-plan.md`](docs/prototype-plan.md)).
+
+## Run the prototype
+
+On a Mac with Xcode installed, from this folder:
+
+```bash
+make run
+```
+
+The first build compiles raylib and takes a minute; later builds are quick.
+
+## Project layout
+
+- `core/`: the simulation, in plain C++ with no graphics. This moves into Unreal later.
+- `loader/`: reads the files in `data/` into core types.
+- `app/`: the throwaway prototype window (raylib).
+- `data/`: game data as text files.
+- `third_party/`: raylib 5.5 and nlohmann/json 3.11.3, with their licences.
 
 ## Contents
 
