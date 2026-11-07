@@ -17,6 +17,14 @@ Why code instead of image-to-3D for buildings:
 
 People and animals still go through image-to-3D and Mixamo (see `docs/asset-prompts.md`, priorities 5 and 6).
 
+## Houses must open up
+
+Players see inside a house from the top-down camera when someone goes in (design document §5). So every house is built in separate parts:
+- **Roof:** roof, gables, chimney top and loft floor, which the game fades away up close
+- **Walls:** full height, plus a cutaway version cut low so the rooms read from above
+- **Interior:** floor, room partitions, the stove, furniture
+- **Shell:** foundation, porch, door and windows
+
 ## Steps
 
 | Step | Who | What |

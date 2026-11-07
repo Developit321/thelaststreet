@@ -105,6 +105,13 @@ Three zoom levels that blend into each other with no loading screens:
 
 Details increase as the camera gets closer: depth of field, ambient sound and character detail all change with zoom.
 
+### Seeing inside houses (decided)
+When a character goes indoors, the player must be able to see them from the top-down camera. Houses are therefore built as **cutaway models:**
+- The **roof** (with the gables, chimney top and loft floor) is a separate piece that fades away when the camera is close to a house, or when a person inside it is selected or followed.
+- The **upper part of the walls** can lower to a cutaway height, so the rooms read clearly from above, like a dollhouse.
+- Every house has a **real interior:** rooms, the big stove under the chimney, table and benches, beds, storage, and a ladder to the loft. People inside are seen eating at the table, sleeping, by the stove or preserving food.
+- From the high strategic view, roofs stay on and the street looks normal.
+
 ---
 
 ## 6. Core Loop
