@@ -223,11 +223,68 @@ def _image(nodes, path, colour, mapping, links):
     return tex
 
 
-def mat_photo(name, texture, size_m, ramp=None, value=1.0, saturation=1.0, rough_scale=1.0, normal=1.0):
+def _add_weathering(nodes, links, colour, kind):
+    """Darkens and greens a surface the way weather does, and deepens creases.
+
+    kind 'wall': damp and grime creeping up from the ground.
+    kind 'roof': moss patches and darker shingles towards the eaves.
+    Every kind also gets ambient occlusion, so corners and gaps go darker."""
+    tc = nodes.new("ShaderNodeTexCoord")
+    sep = nodes.new("ShaderNodeSeparateXYZ")
+    links.new(tc.outputs["Object"], sep.inputs["Vector"])
+    patches = nodes.new("ShaderNodeTexNoise")
+    patches.inputs["Scale"].default_value = 1.4
+    patches.inputs["Detail"].default_value = 6.0
+    links.new(tc.outputs["Object"], patches.inputs["Vector"])
+
+    if kind == "wall":
+        # 1 at ground level, fading to 0 about a metre up.
+        height = nodes.new("ShaderNodeMapRange")
+        height.inputs["From Min"].default_value = 0.4
+        height.inputs["From Max"].default_value = 1.6
+        height.inputs["To Min"].default_value = 1.0
+        height.inputs["To Max"].default_value = 0.0
+        links.new(sep.outputs["Z"], height.inputs["Value"])
+        amount = nodes.new("ShaderNodeMath")
+        amount.operation = "MULTIPLY"
+        links.new(height.outputs["Result"], amount.inputs[0])
+        links.new(patches.outputs["Fac"], amount.inputs[1])
+        grime = nodes.new("ShaderNodeMix")
+        grime.data_type = "RGBA"
+        grime.blend_type = "MULTIPLY"
+        grime.inputs["B"].default_value = (0.42, 0.45, 0.36, 1)
+        links.new(amount.outputs["Value"], grime.inputs["Factor"])
+        links.new(colour, grime.inputs["A"])
+        colour = grime.outputs["Result"]
+    elif kind == "roof":
+        moss_mask = _ramp(nodes, (0, 0, 0), (1, 1, 1), 0.52, 0.68)
+        links.new(patches.outputs["Fac"], moss_mask.inputs["Fac"])
+        moss = nodes.new("ShaderNodeMix")
+        moss.data_type = "RGBA"
+        moss.inputs["B"].default_value = (0.11, 0.14, 0.05, 1)
+        links.new(moss_mask.outputs["Color"], moss.inputs["Factor"])
+        links.new(colour, moss.inputs["A"])
+        colour = moss.outputs["Result"]
+
+    ao = nodes.new("ShaderNodeAmbientOcclusion")
+    ao.inputs["Distance"].default_value = 0.35
+    links.new(colour, ao.inputs["Color"])
+    soften = nodes.new("ShaderNodeMix")
+    soften.data_type = "RGBA"
+    soften.inputs["Factor"].default_value = 0.65
+    links.new(colour, soften.inputs["A"])
+    links.new(ao.outputs["Color"], soften.inputs["B"])
+    return soften.outputs["Result"]
+
+
+def mat_photo(name, texture, size_m, ramp=None, value=1.0, saturation=1.0, rough_scale=1.0, normal=1.0,
+              weather=None):
     """A Poly Haven photo texture at its real size.
 
     ramp: optional (dark, light) colours to repaint it, keeping only its light
-    and shade, for painted wood in our own colours."""
+    and shade, for painted wood in our own colours.
+    weather: 'wall' or 'roof' grime (see _add_weathering); any other value
+    still adds soft shadows in creases."""
     folder = os.path.join(TEXTURES, texture)
     if not os.path.isdir(folder):
         return None
@@ -248,7 +305,7 @@ def mat_photo(name, texture, size_m, ramp=None, value=1.0, saturation=1.0, rough
     hsv.inputs["Saturation"].default_value = saturation
     hsv.inputs["Value"].default_value = value
     links.new(colour, hsv.inputs["Color"])
-    links.new(hsv.outputs["Color"], bsdf.inputs["Base Color"])
+    links.new(_add_weathering(nodes, links, hsv.outputs["Color"], weather), bsdf.inputs["Base Color"])
 
     rmul = nodes.new("ShaderNodeMath")
     rmul.operation = "MULTIPLY"
@@ -280,21 +337,26 @@ def build_materials():
     # Photo textures from Poly Haven (CC0) replace the procedural ones where
     # they've been downloaded into assets/textures/.
     photo = {
-        "log_x": mat_photo("Logs (photo)", "weathered_brown_planks", 2.4, value=0.75, saturation=0.7),
-        "shingle": mat_photo("Shingles (photo)", "roof_09", 3.2, value=0.7, saturation=0.45),
-        "shingle_dark": mat_photo("Shingles dark (photo)", "roof_09", 3.0, value=0.5, saturation=0.4),
-        "shingle_light": mat_photo("Shingles light (photo)", "roof_09", 3.4, value=0.85, saturation=0.5),
-        "stone": mat_photo("Fieldstone (photo)", "rustic_stone_wall", 1.3, value=0.8, saturation=0.6),
-        "brick": mat_photo("Chimney brick (photo)", "red_brick_03", 1.0, value=0.85),
+        "log_x": mat_photo("Logs (photo)", "weathered_brown_planks", 2.4, value=0.75, saturation=0.7,
+                           weather="wall"),
+        "shingle": mat_photo("Shingles (photo)", "roof_09", 3.2, value=0.7, saturation=0.45, weather="roof"),
+        "shingle_dark": mat_photo("Shingles dark (photo)", "roof_09", 3.0, value=0.6, saturation=0.42,
+                                  weather="roof"),
+        "shingle_light": mat_photo("Shingles light (photo)", "roof_09", 3.4, value=0.85, saturation=0.5,
+                                   weather="roof"),
+        "stone": mat_photo("Fieldstone (photo)", "rustic_stone_wall", 1.3, value=0.8, saturation=0.6,
+                           weather="wall"),
+        "brick": mat_photo("Chimney brick (photo)", "red_brick_03", 1.0, value=0.85, weather="soot"),
         "red_boards": mat_photo("Red boards (photo)", "distressed_painted_planks", 1.6,
-                                ramp=((0.10, 0.02, 0.015), (0.30, 0.06, 0.045))),
+                                ramp=((0.10, 0.02, 0.015), (0.30, 0.06, 0.045)), weather="paint"),
         "red_door": mat_photo("Red door (photo)", "distressed_painted_planks", 1.2,
-                              ramp=((0.11, 0.02, 0.016), (0.32, 0.07, 0.05))),
+                              ramp=((0.11, 0.02, 0.016), (0.32, 0.07, 0.05)), weather="wall"),
         "ochre": mat_photo("Ochre paint (photo)", "distressed_painted_planks", 1.0,
-                           ramp=((0.24, 0.13, 0.04), (0.55, 0.36, 0.13))),
-        "trim": mat_photo("Trim (photo)", "weathered_brown_planks", 2.0, value=0.6, saturation=0.6),
-        "floor": mat_photo("Floor (photo)", "old_planks_02", 2.0, value=0.8),
-        "planks": mat_photo("Planks (photo)", "old_planks_02", 1.6, value=0.9),
+                           ramp=((0.18, 0.10, 0.03), (0.44, 0.29, 0.10)), weather="paint"),
+        "trim": mat_photo("Trim (photo)", "weathered_brown_planks", 2.0, value=0.6, saturation=0.6,
+                          weather="wall"),
+        "floor": mat_photo("Floor (photo)", "old_planks_02", 2.0, value=0.8, weather="floor"),
+        "planks": mat_photo("Planks (photo)", "old_planks_02", 1.6, value=0.9, weather="floor"),
     }
     if photo["log_x"]:
         photo["log_y"] = photo["log_x"]
@@ -324,8 +386,9 @@ def procedural_materials():
         "red_boards": mat_bands("Red boards", (0.12, 0.025, 0.02), (0.20, 0.04, 0.03), "Y", scale=6.0),
         "red_door": mat_bands("Red door", (0.13, 0.03, 0.025), (0.21, 0.05, 0.04), "X", scale=7.0),
         "trim": mat_noise("Grey trim", (0.11, 0.10, 0.08), (0.20, 0.18, 0.15), noise_scale=8.0),
-        "glass": mat_plain("Glass", (0.08, 0.10, 0.12), rough=0.08),
-        "lace": mat_plain("Lace", (0.92, 0.90, 0.85), rough=0.9, alpha=0.85),
+        # Partly see-through, so the lace curtains show behind the old glass.
+        "glass": mat_plain("Glass", (0.04, 0.05, 0.06), rough=0.06, alpha=0.72),
+        "lace": mat_plain("Lace", (0.70, 0.68, 0.63), rough=0.9, alpha=0.5),
         "floor": mat_bands("Floor planks", (0.14, 0.10, 0.06), (0.24, 0.18, 0.11), "Y", scale=9.0),
         "planks": mat_bands("Interior planks", (0.18, 0.13, 0.08), (0.28, 0.21, 0.13), "X", scale=8.0),
         "tile": mat_brick("Stove tiles", (0.86, 0.84, 0.78), (0.80, 0.78, 0.72), (0.60, 0.58, 0.54),
@@ -335,6 +398,7 @@ def procedural_materials():
         "wool_blue": mat_noise("Wool blue", (0.10, 0.15, 0.25), (0.18, 0.25, 0.38), noise_scale=30.0, rough=1.0),
         "wool_green": mat_noise("Wool green", (0.15, 0.22, 0.12), (0.24, 0.33, 0.18), noise_scale=30.0, rough=1.0),
         "linen": mat_noise("Linen", (0.75, 0.72, 0.64), (0.86, 0.83, 0.76), noise_scale=40.0, rough=1.0),
+        "moss": mat_noise("Moss", (0.07, 0.09, 0.03), (0.16, 0.20, 0.07), noise_scale=25.0, rough=1.0, bump=0.6),
         "pottery": mat_noise("Pottery", (0.45, 0.26, 0.16), (0.60, 0.38, 0.24), noise_scale=20.0, rough=0.6),
         "ground": mat_noise("Ground", (0.24, 0.27, 0.15), (0.38, 0.36, 0.22), noise_scale=0.6, rough=1.0, bump=0.3),
         "backdrop": mat_plain("Backdrop", (0.80, 0.80, 0.80), rough=1.0),
@@ -384,6 +448,12 @@ class MeshBuilder:
         if cap_mat is not None:
             # The round ends are the only faces with more than four corners.
             self._paint([f for f in faces if len(f.verts) > 4], cap_mat)
+
+    def blob(self, center, size, mat, rot=(0, 0, 0)):
+        """A squashed ball: moss tufts, stones, sacks."""
+        m = Matrix.LocRotScale(Vector(center), Euler(rot).to_quaternion(), Vector(size))
+        result = bmesh.ops.create_icosphere(self.bm, subdivisions=2, radius=0.5, matrix=m)
+        self._paint(self._faces_of(result), mat, smooth=True)
 
     def poly(self, verts, faces, mat):
         """Any shape from a vertex list and faces given as index tuples."""
@@ -543,6 +613,26 @@ def build_window_on(b, mats, center, facing, z_bottom, width, height):
         upper.append((u, top + 0.12 + 0.17 * bell * width + ears + finial))
     carved([(-cw / 2, top), (cw / 2, top)] + upper, 0.04, 0.11, mats["ochre"])
 
+    # A second, smaller carved layer in front, so the crown has depth.
+    iw = cw * 0.68
+    inner = []
+    for i in range(steps + 1):
+        u = iw / 2 - iw * i / steps
+        bell = math.cos(math.pi * u / iw) ** 2
+        inner.append((u, top + 0.1 + 0.12 * bell * width + 0.05 * math.exp(-((u / 0.03) ** 2))))
+    carved([(-iw / 2, top + 0.03), (iw / 2, top + 0.03)] + inner, 0.11, 0.145, mats["ochre"])
+
+    # Carved drops hanging under the ends of the crown.
+    axis = "X" if dx != 0 else "Y"
+    for side in (-1, 1):
+        b.cylinder(at(side * (cw / 2 - 0.05), 0.08, top - 0.045), 0.026, 0.09, "Z", mats["ochre"],
+                   segments=8, radius2=0.006)
+        # A raised bead down the middle of each side board.
+        b.box(at(side * (width / 2 + t / 2), 0.095, zc), (0.026, 0.024, height), mats["ochre"], rot)
+        # A small round boss where the side board meets the sill.
+        b.cylinder(at(side * (width / 2 + t / 2), 0.1, z_bottom + 0.02), 0.04, 0.03, axis, mats["ochre"],
+                   segments=10)
+
     # Sill, and a scalloped apron below it.
     b.box(at(0, 0.1, z_bottom - 0.05), (width + 0.3, 0.14, 0.07), mats["ochre"], rot)
     aw = width * 0.9
@@ -605,20 +695,49 @@ def build_roof(h, mats, collection):
         shingle_mats = [mats["shingle"], mats["shingle"], mats["shingle_dark"], mats["shingle_light"]]
         row = 0.22
         n_rows = int(slope_len / row)
+
+        def sag(x):
+            # The roof dips a few centimetres towards the middle with age.
+            return -0.04 * math.sin(math.pi * (x - x0) / (x1 - x0))
+
         for i in range(n_rows):
             dist = slope_len - (i + 0.5) * row          # distance down the slope from the ridge
             y = side * dist * math.cos(pitch)
             z = ridge - dist * math.sin(pitch) + 0.06
-            sx = x0
-            while sx < x1 - 0.05:
-                run = min(rng.uniform(0.8, 2.6), x1 - sx)
+            if i == n_rows - 1:
+                # The eave row: individual shingles of different widths, a few
+                # missing, some cocked up by the wind.
+                sx = x0 + rng.uniform(-0.05, 0.02)
+                while sx < x1:
+                    w = rng.uniform(0.11, 0.24)
+                    if rng.random() > 0.05:
+                        b.box((sx + w / 2, y, z + sag(sx) + rng.uniform(-0.01, 0.02)), (w - 0.012, row * 1.3, 0.03),
+                              rng.choice(shingle_mats),
+                              (tilt - side * rng.uniform(0.04, 0.12), rng.uniform(-0.05, 0.05), rng.uniform(-0.04, 0.04)))
+                    sx += w
+                continue
+            # Other rows: short runs, with ragged ends at the gables.
+            sx = x0 + rng.uniform(-0.06, 0.03)
+            end = x1 + rng.uniform(-0.03, 0.06)
+            while sx < end - 0.05:
+                run = min(rng.uniform(0.8, 2.6), end - sx)
                 lift = rng.uniform(-0.008, 0.012)
-                b.box((sx + run / 2, y, z + lift), (run, row * 1.25, 0.035), rng.choice(shingle_mats),
-                      (tilt - side * rng.uniform(0.05, 0.08), 0, 0))
+                b.box((sx + run / 2, y, z + lift + sag(sx + run / 2)), (run, row * 1.25, 0.035),
+                      rng.choice(shingle_mats), (tilt - side * rng.uniform(0.05, 0.08), 0, 0))
                 sx += run
 
-    # Ridge cap
-    b.box((0, 0, ridge + 0.1), (x1 - x0 + 0.05, 0.3, 0.12), mats["trim"])
+        # Moss tufts gathering on the lower, shadier part of the slope.
+        for _ in range(14 if side > 0 else 9):
+            dist = slope_len * rng.uniform(0.55, 0.95)
+            mx = rng.uniform(x0 + 0.3, x1 - 0.3)
+            my = side * dist * math.cos(pitch)
+            mz = ridge - dist * math.sin(pitch) + 0.09 + sag(mx)
+            b.blob((mx, my, mz), (rng.uniform(0.15, 0.4), rng.uniform(0.12, 0.25), 0.05), mats["moss"],
+                   (tilt, 0, rng.uniform(0, math.pi)))
+
+    # Ridge cap: two weathered boards meeting over the ridge.
+    for side in (-1, 1):
+        b.box((0, side * 0.08, ridge + 0.1), (x1 - x0 + 0.05, 0.2, 0.04), mats["trim"], (-side * pitch, 0, 0))
 
     # Gables: triangles of red vertical boards on both ends, with grey barge boards.
     for side in (-1, 1):
@@ -818,6 +937,18 @@ def build_interior(h, mats, collection):
 # ---------------------------------------------------------------------------
 
 
+def soften_edges(obj, width=0.012):
+    """Rounds every sharp edge a little, so corners catch the light like real
+    timber and stone instead of looking machine-cut."""
+    bevel = obj.modifiers.new("Soft edges", "BEVEL")
+    bevel.width = width
+    bevel.segments = 2
+    bevel.limit_method = "ANGLE"
+    bevel.angle_limit = math.radians(40)
+    bevel.use_clamp_overlap = True
+    bevel.harden_normals = False
+
+
 def make_collection(name):
     col = bpy.data.collections.new(name)
     bpy.context.scene.collection.children.link(col)
@@ -903,12 +1034,16 @@ def main():
 
     cols = {name: make_collection(name) for name in
             ("Shell", "Walls_Full", "Walls_Cutaway", "Windows", "Roof", "Interior", "Stage")}
-    build_shell(h, mats, cols["Shell"])
-    build_walls(h, mats, cols["Walls_Full"], h["log_rows"], "Walls_Full")
-    build_walls(h, mats, cols["Walls_Cutaway"], CUTAWAY_ROWS, "Walls_Cutaway")
-    build_windows(h, mats, cols["Windows"])
-    build_roof(h, mats, cols["Roof"])
-    build_interior(h, mats, cols["Interior"])
+    parts = [
+        build_shell(h, mats, cols["Shell"]),
+        build_walls(h, mats, cols["Walls_Full"], h["log_rows"], "Walls_Full"),
+        build_walls(h, mats, cols["Walls_Cutaway"], CUTAWAY_ROWS, "Walls_Cutaway"),
+        build_windows(h, mats, cols["Windows"]),
+        build_roof(h, mats, cols["Roof"]),
+        build_interior(h, mats, cols["Interior"]),
+    ]
+    for part in parts:
+        soften_edges(part)
 
     # A stage to stand on: plain grey to compare with the references, or ground for game views.
     stage = MeshBuilder("Backdrop")
