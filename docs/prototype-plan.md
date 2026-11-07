@@ -68,7 +68,7 @@ To keep it small, these wait until after the prototype proves the fun:
 - Losing everyone ends the game with a summary
 
 ### Step 4: Jobs and direct orders
-**Builds:** the jobs panel (assign each person to firewood, garden, repair, preserve food or rest), direct orders (select a person, then click a target), planting and harvesting, and **food storage:** fresh food spoils over time, preserving (drying, salting, smoking) makes it last, and storage space limits how much you can keep.
+**Builds:** the jobs panel (assign each person to firewood, garden, preserve food or rest; repairing comes with house damage in step 7), direct orders (select a person, then click a target), planting and harvesting, and **food storage:** fresh food spoils over time, preserving (drying, salting, smoking) makes it last, and storage space limits how much you can keep.
 **You test:**
 - Assigning jobs changes what people do and what gets produced
 - Direct orders work: select, click, they go and do it

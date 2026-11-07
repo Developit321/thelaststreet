@@ -42,6 +42,14 @@ struct NeedsLoadResult {
 
 NeedsLoadResult LoadNeeds(const std::string& path);
 
+struct WorkLoadResult {
+    bool ok = false;
+    std::string error;
+    tls::WorkConfig work;
+};
+
+WorkLoadResult LoadWork(const std::string& path);
+
 struct HouseholdsLoadResult {
     bool ok = false;
     std::string error;

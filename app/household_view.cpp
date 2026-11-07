@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include "raymath.h"
 
@@ -81,6 +82,38 @@ void HouseholdView::DrawWorld(const tls::Simulation& sim, const SceneLook& look,
         const tls::Household& household = households[h];
         const tls::Plot* plot = PlotOf(sim, static_cast<int>(h));
         if (!plot) continue;
+
+        // The garden as it really is: rows appear as they're sown, grow and
+        // ripen, and disappear as they're harvested.
+        const tls::Rect& gr = plot->garden;
+        const tls::Garden& g = household.garden;
+        DrawRectangleRec({gr.x, gr.y, gr.w, gr.h}, look.soil);
+        std::vector<float> rowsY;
+        for (float ry = gr.y + 1.0f; ry < gr.Bottom() - 0.5f; ry += 1.5f) rowsY.push_back(ry);
+        const float expected = household.ExpectedHarvest(sim.Work());
+        const float standing = g.growth < 1.0f ? 1.0f
+                                               : (expected > 0.0f ? household.CropInGround(sim.Work()) / expected : 0.0f);
+        const float rowsShown = g.planted * rowsY.size() * standing;
+        if (rowsShown > 0.0f && look.snow < 0.6f) {
+            const Color young{132, 176, 86, 255};
+            const Color grown{78, 128, 56, 255};
+            const Color ripe{164, 150, 70, 255};
+            Color crop = g.growth >= 1.0f ? ripe : grown;
+            if (g.growth < 1.0f) {
+                const float t = g.growth;
+                crop = {static_cast<unsigned char>(young.r + (grown.r - young.r) * t),
+                        static_cast<unsigned char>(young.g + (grown.g - young.g) * t),
+                        static_cast<unsigned char>(young.b + (grown.b - young.b) * t), 255};
+            }
+            const float width = 0.15f + 0.55f * std::max(0.1f, g.growth);
+            for (size_t r = 0; r < rowsY.size(); ++r) {
+                const float fill = std::clamp(rowsShown - static_cast<float>(r), 0.0f, 1.0f);
+                if (fill <= 0.0f) break;
+                const float x0 = gr.x + 0.6f;
+                const float x1 = x0 + (gr.w - 1.2f) * fill;
+                DrawLineEx({x0, rowsY[r]}, {x1, rowsY[r]}, width, crop);
+            }
+        }
 
         // Woodpile: rows of logs that shrink as the store runs down.
         const tls::Rect& w = plot->woodpile;
@@ -162,6 +195,21 @@ void HouseholdView::DrawLabels(const tls::Simulation& sim, const Camera2D& camer
         DrawRectangleRounded({at.x - 6, at.y - 2, dims.x + 12, dims.y + 4}, 0.5f, 6, Fade(BLACK, 0.6f));
         DrawTextEx(font, p.name.c_str(), at, 17, 1, selected ? kSelected : RAYWHITE);
     }
+}
+
+bool HouseholdView::PlaceAt(const tls::Simulation& sim, int household, Vector2 world, tls::Place& place) const {
+    const tls::Plot* plot = PlotOf(sim, household);
+    if (!plot) return false;
+    const tls::Vec2 p{world.x, world.y};
+    auto grow = [](const tls::Rect& r, float by) {
+        return tls::Rect{r.x - by, r.y - by, r.w + 2 * by, r.h + 2 * by};
+    };
+    if (grow(plot->woodpile, 1.5f).Contains(p)) place = tls::Place::Woodpile;
+    else if (grow(plot->garden, 0.5f).Contains(p)) place = tls::Place::Garden;
+    else if (plot->house.Contains(p)) place = tls::Place::House;
+    else if (plot->bounds.Contains(p)) place = tls::Place::Yard;
+    else return false;
+    return true;
 }
 
 bool HouseholdView::PersonAt(const tls::Simulation& sim, Vector2 world, int& household, int& person) const {

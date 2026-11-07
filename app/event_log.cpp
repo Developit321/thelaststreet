@@ -47,6 +47,23 @@ void EventLog::Add(const tls::Simulation& sim, const tls::Event& e) {
             text = h->name + " are gone.";
             important = true;
             break;
+        case tls::EventType::FoodSpoiled:
+            text = TextFormat("%.0f rations of fresh food have spoiled.", e.value);
+            break;
+        case tls::EventType::PlantingDone:
+            text = "The garden is sown.";
+            break;
+        case tls::EventType::CropsReady:
+            text = TextFormat("The garden is ready: about %.0f rations to harvest.", e.value);
+            important = true;
+            break;
+        case tls::EventType::HarvestDone:
+            text = TextFormat("The harvest is in: %.0f rations.", e.value);
+            break;
+        case tls::EventType::CropsLostToFrost:
+            text = TextFormat("Frost has ruined %.0f rations still in the ground.", e.value);
+            important = true;
+            break;
     }
     entries_.push_front({e.minute, text, important});
     while (entries_.size() > kKeep) entries_.pop_back();

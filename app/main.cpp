@@ -106,8 +106,8 @@ void DrawBottomBar(Font font, ui::Blockers& blockers) {
     blockers.Add(bar);
     DrawRectangleRec(bar, Fade(BLACK, 0.5f));
     const char* help =
-        "Select: click a person     Move: drag, arrows or WASD     Zoom: scroll or + / -     "
-        "Reset view: R     Pause: Space     Speed: 1-4     Debug: ` or F1";
+        "Select: click a person, then click your plot to send them     Move: drag, arrows or WASD     "
+        "Zoom: scroll or + / -     Reset: R     Pause: Space     Speed: 1-4     Debug: `";
     ui::Text(font, help, {20, h - 27}, 17);
 }
 
@@ -136,6 +136,7 @@ int main() {
     const StreetLoadResult street = LoadStreet(FindDataFile("street.json"));
     const CalendarLoadResult calendar = LoadCalendar(FindDataFile("calendar.json"));
     const NeedsLoadResult needs = LoadNeeds(FindDataFile("needs.json"));
+    const WorkLoadResult work = LoadWork(FindDataFile("work.json"));
     HouseholdsLoadResult households;
     if (street.ok) households = LoadHouseholds(FindDataFile("households.json"), street.street);
 
@@ -143,6 +144,7 @@ int main() {
     if (!street.ok) error = street.error;
     else if (!calendar.ok) error = calendar.error;
     else if (!needs.ok) error = needs.error;
+    else if (!work.ok) error = work.error;
     else if (!households.ok) error = households.error;
     if (!error.empty()) {
         TraceLog(LOG_ERROR, "%s", error.c_str());
@@ -151,7 +153,7 @@ int main() {
         return 1;
     }
 
-    const tls::SimConfig config{calendar.calendar, calendar.climate, needs.needs};
+    const tls::SimConfig config{calendar.calendar, calendar.climate, needs.needs, work.work};
     tls::Simulation sim(config, street.street, households.households);
     TimeControls time(calendar.pace);
     DebugPanel debug;
@@ -192,9 +194,15 @@ int main() {
             const Vector2 world = GetScreenToWorld2D(GetMousePosition(), camera.Camera());
             int h = -1;
             int p = -1;
+            tls::Place place;
             if (householdView.PersonAt(sim, world, h, p)) {
                 selection.household = h;
                 selection.person = p;
+            } else if (selection.Any() && selection.household == sim.PlayerHousehold() &&
+                       sim.Households()[selection.household].members[selection.person].alive &&
+                       householdView.PlaceAt(sim, selection.household, world, place)) {
+                // With one of your family selected, clicking your plot sends them there.
+                sim.Order(selection.household, selection.person, place);
             } else {
                 selection.Clear();
             }

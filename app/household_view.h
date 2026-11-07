@@ -26,6 +26,10 @@ public:
     // The person under a world position, if any. Returns false if none.
     bool PersonAt(const tls::Simulation& sim, Vector2 world, int& household, int& person) const;
 
+    // Which part of a household's plot a world position falls on, for direct
+    // orders. Returns false if it's outside the plot.
+    bool PlaceAt(const tls::Simulation& sim, int household, Vector2 world, tls::Place& place) const;
+
     void Reset() { drawn_.clear(); }
 
 private:

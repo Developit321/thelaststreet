@@ -67,6 +67,8 @@ public:
     void JumpToSeason(Season season);
     // Add (or with negative amounts, remove) stored food and firewood.
     void AdjustStores(int household, float food, float firewood);
+    // Sow the whole garden and ripen it at once, to test harvesting.
+    void RipenGarden(int household);
 
     // --- Time and weather -------------------------------------------------
     int64_t Minute() const { return minute_; }

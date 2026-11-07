@@ -278,7 +278,8 @@ HouseholdsLoadResult LoadHouseholds(const std::string& path, const tls::StreetLa
                 r.Fail(where + ": there is no plot '" + household.plotId + "' in the street");
             }
             if (const json* s = r.Field(h, "stores", where)) {
-                household.stores.food = r.Number(*s, "food", where + ".stores");
+                household.stores.freshFood = r.Number(*s, "fresh_food", where + ".stores");
+                household.stores.preservedFood = r.Number(*s, "preserved_food", where + ".stores");
                 household.stores.firewood = r.Number(*s, "firewood", where + ".stores");
             }
             if (const json* members = r.Field(h, "members", where)) {
@@ -297,6 +298,12 @@ HouseholdsLoadResult LoadHouseholds(const std::string& path, const tls::StreetLa
                         else if (role == "child") person.role = tls::Role::Child;
                         else if (role == "elder") person.role = tls::Role::Elder;
                         else r.Fail(pw + ": 'role' must be worker, homemaker, child or elder");
+                        const std::string job = r.String(pj, "job", pw);
+                        if (job == "firewood") person.job = tls::Job::Firewood;
+                        else if (job == "garden") person.job = tls::Job::Garden;
+                        else if (job == "preserve") person.job = tls::Job::Preserve;
+                        else if (job == "rest") person.job = tls::Job::Rest;
+                        else r.Fail(pw + ": 'job' must be firewood, garden, preserve or rest");
                         household.members.push_back(person);
                     }
                 }
@@ -306,6 +313,64 @@ HouseholdsLoadResult LoadHouseholds(const std::string& path, const tls::StreetLa
     }
     if (r.error.empty() && players != 1) r.Fail("exactly one household must be the player's");
 
+    if (!r.error.empty()) {
+        result.error = path + ": " + r.error;
+        return result;
+    }
+    result.ok = true;
+    return result;
+}
+
+WorkLoadResult LoadWork(const std::string& path) {
+    WorkLoadResult result;
+
+    const json root = ReadJson(path, result.error);
+    if (root.is_discarded()) return result;
+
+    Reader r;
+    tls::WorkConfig& w = result.work;
+    if (const json* s = r.Field(root, "rates", "work file")) {
+        w.workerRate = r.Number(*s, "worker", "rates");
+        w.homemakerRate = r.Number(*s, "homemaker", "rates");
+        w.childRate = r.Number(*s, "child", "rates");
+        w.elderRate = r.Number(*s, "elder", "rates");
+        w.sickRate = r.Number(*s, "sick_multiplier", "rates");
+        w.bitterColdC = r.Number(*s, "bitter_cold_c", "rates");
+        w.tooColdC = r.Number(*s, "too_cold_c", "rates");
+    }
+    if (const json* s = r.Field(root, "firewood", "work file")) {
+        w.firewoodPerHour = r.Number(*s, "bundles_per_hour", "firewood");
+    }
+    if (const json* s = r.Field(root, "garden", "work file")) {
+        w.plantingHours = r.Number(*s, "planting_hours", "garden");
+        w.growDays = r.Number(*s, "grow_days", "garden");
+        w.growMinTempC = r.Number(*s, "grow_min_temp_c", "garden");
+        w.careDecayPerDay = r.Number(*s, "care_decay_per_day", "garden");
+        w.carePerHour = r.Number(*s, "care_per_hour", "garden");
+        w.fullHarvest = r.Number(*s, "full_harvest", "garden");
+        w.harvestPerHour = r.Number(*s, "harvest_per_hour", "garden");
+        w.frostLossPerDay = r.Number(*s, "frost_loss_per_day", "garden");
+    }
+    if (const json* s = r.Field(root, "storage", "work file")) {
+        w.freshSpoilWarm = r.Number(*s, "fresh_spoil_warm", "storage");
+        w.freshSpoilMild = r.Number(*s, "fresh_spoil_mild", "storage");
+        w.freshSpoilCold = r.Number(*s, "fresh_spoil_cold", "storage");
+        w.preservedSpoil = r.Number(*s, "preserved_spoil", "storage");
+        w.preservePerHour = r.Number(*s, "preserve_per_hour", "storage");
+        w.preserveLoss = r.Number(*s, "preserve_loss", "storage");
+        w.preserveFirewoodPerRation = r.Number(*s, "preserve_firewood_per_ration", "storage");
+        w.freshCapacity = r.Number(*s, "fresh_capacity", "storage");
+        w.preservedCapacity = r.Number(*s, "preserved_capacity", "storage");
+        w.overflowSpoilPerDay = r.Number(*s, "overflow_spoil_per_day", "storage");
+    }
+    if (const json* s = r.Field(root, "orders", "work file")) {
+        w.orderMinutes = r.Number(*s, "minutes", "orders");
+    }
+
+    if (r.error.empty()) {
+        if (w.plantingHours <= 0 || w.growDays <= 0) r.Fail("garden: planting hours and grow days must be above 0");
+        if (w.preserveLoss < 0 || w.preserveLoss >= 1) r.Fail("storage: 'preserve_loss' must be between 0 and 1");
+    }
     if (!r.error.empty()) {
         result.error = path + ": " + r.error;
         return result;

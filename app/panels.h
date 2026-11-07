@@ -11,14 +11,14 @@ struct Selection {
     void Clear() { household = person = -1; }
 };
 
-// Your household at a glance: stores, the house and the family. Clicking a
-// name selects that person. Returns the bottom edge of the panel.
-float DrawHouseholdPanel(const tls::Simulation& sim, Font font, ui::Blockers& blockers,
-                         Selection& selection);
+// Your household at a glance: stores, the house, the garden and the family,
+// with job buttons for each person. Clicking a name selects that person.
+// Returns the bottom edge of the panel.
+float DrawHouseholdPanel(tls::Simulation& sim, Font font, ui::Blockers& blockers, Selection& selection);
 
 // Details for the selected person, placed below the household panel.
-void DrawPersonPanel(const tls::Simulation& sim, Font font, ui::Blockers& blockers,
-                     Selection& selection, float top);
+void DrawPersonPanel(tls::Simulation& sim, Font font, ui::Blockers& blockers, Selection& selection,
+                     float top);
 
 // Warnings strip under the top bar.
 void DrawWarnings(const tls::Simulation& sim, Font font);

@@ -1,0 +1,45 @@
+{
+  "_about": "Balance numbers for work, the garden and food storage. Food is in rations (one adult's food for a day), firewood in bundles.",
+
+  "rates": {
+    "worker": 1.0,
+    "homemaker": 0.8,
+    "child": 0.35,
+    "elder": 0.3,
+    "sick_multiplier": 0.4,
+    "bitter_cold_c": -10,
+    "too_cold_c": -22
+  },
+
+  "firewood": {
+    "bundles_per_hour": 1.0
+  },
+
+  "garden": {
+    "planting_hours": 36,
+    "grow_days": 24,
+    "grow_min_temp_c": 5,
+    "care_decay_per_day": 0.04,
+    "care_per_hour": 0.04,
+    "full_harvest": 300,
+    "harvest_per_hour": 8,
+    "frost_loss_per_day": 0.5
+  },
+
+  "storage": {
+    "fresh_spoil_warm": 0.04,
+    "fresh_spoil_mild": 0.015,
+    "fresh_spoil_cold": 0.003,
+    "preserved_spoil": 0.0005,
+    "preserve_per_hour": 3,
+    "preserve_loss": 0.1,
+    "preserve_firewood_per_ration": 0.05,
+    "fresh_capacity": 120,
+    "preserved_capacity": 250,
+    "overflow_spoil_per_day": 0.25
+  },
+
+  "orders": {
+    "minutes": 120
+  }
+}

@@ -8,7 +8,7 @@ void DebugPanel::Draw(tls::Simulation& sim, Font font, ui::Blockers& blockers) {
     if (!open_) return;
 
     const float width = 300.0f;
-    const Rectangle panel{GetScreenWidth() - width - 16.0f, 84.0f, width, 560.0f};
+    const Rectangle panel{GetScreenWidth() - width - 16.0f, 80.0f, width, 690.0f};
     blockers.Add(panel);
     DrawRectangleRounded(panel, 0.04f, 8, ui::kPanel);
 
@@ -41,7 +41,7 @@ void DebugPanel::Draw(tls::Simulation& sim, Font font, ui::Blockers& blockers) {
             const float bx = x + 84.0f;
             const float bw = 54.0f;
             const tls::Stores& s = sim.Households()[home].stores;
-            const float current = row.food ? s.food : s.firewood;
+            const float current = row.food ? s.Food() : s.firewood;
             float change = 0.0f;
             if (ui::Button(font, {bx, y, bw, 28}, "-10")) change = -10.0f;
             if (ui::Button(font, {bx + bw + 6, y, bw, 28}, "+10")) change = 10.0f;
@@ -51,7 +51,8 @@ void DebugPanel::Draw(tls::Simulation& sim, Font font, ui::Blockers& blockers) {
             }
             y += 36.0f;
         }
-        y += 6.0f;
+        if (ui::Button(font, {x, y, width - 32.0f, 28}, "Sow and ripen the garden now")) sim.RipenGarden(home);
+        y += 40.0f;
     }
 
     // The hidden numbers behind the weather.
@@ -86,5 +87,9 @@ void DebugPanel::Draw(tls::Simulation& sim, Font font, ui::Blockers& blockers) {
         row("Stove burning", TextFormat("%.0f%%", h.stovePower * 100.0f));
         row("Firewood used per day", TextFormat("%.1f", h.firewoodPerDay));
         row("Food needed per day", TextFormat("%.1f", h.FoodNeededPerDay(sim.Needs())));
+        row("Fresh / preserved food", TextFormat("%.1f / %.1f", h.stores.freshFood, h.stores.preservedFood));
+        row("Garden sown / grown", TextFormat("%.0f%% / %.0f%%", h.garden.planted * 100.0f, h.garden.growth * 100.0f));
+        row("Garden care", TextFormat("%.0f%%", h.garden.care * 100.0f));
+        row("Harvest expected / in", TextFormat("%.0f / %.0f", h.ExpectedHarvest(sim.Work()), h.garden.harvested));
     }
 }

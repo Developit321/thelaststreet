@@ -25,6 +25,19 @@ Activity Simulation::GardenActivity(const Household& household) const {
     return Activity::Indoors;
 }
 
+void Simulation::RipenGarden(int household) {
+    if (household < 0 || household >= static_cast<int>(households_.size())) return;
+    Household& h = households_[household];
+    h.garden.planted = 1.0f;
+    h.garden.growth = 1.0f;
+    h.garden.plantingAnnounced = true;
+    if (!h.garden.readyAnnounced) {
+        h.garden.readyAnnounced = true;
+        Emit(EventType::CropsReady, household, -1, h.CropInGround(work_));
+    }
+    PlanDay(h);
+}
+
 float Simulation::WorkRate(const Person& p, bool outside) const {
     float rate = work_.workerRate;
     switch (p.role) {
