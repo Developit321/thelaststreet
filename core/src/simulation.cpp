@@ -10,6 +10,7 @@ Simulation::Simulation(const SimConfig& config, const StreetLayout& street,
       weather_(calendar_, config.climate),
       street_(street),
       needs_(config.needs),
+      work_(config.work),
       households_(std::move(households)) {
     minute_ = calendar_.StartMinute();
     for (size_t i = 0; i < households_.size(); ++i) {
@@ -29,7 +30,11 @@ void Simulation::Step() {
     const bool newDay = calendar_.DayIndex(minute_) != calendar_.DayIndex(minute_ - 1);
     if (newDay) {
         Emit(EventType::NewDay);
-        for (Household& h : households_) EndOfDay(h);
+        for (size_t i = 0; i < households_.size(); ++i) EndOfDay(static_cast<int>(i));
+    }
+    // A new year starts in spring with a bare garden.
+    if (after.year != before.year) {
+        for (Household& h : households_) h.garden = Garden{};
     }
 
     for (size_t i = 0; i < households_.size(); ++i) TickHousehold(static_cast<int>(i));
@@ -44,10 +49,44 @@ void Simulation::JumpToSeason(Season season) {
     for (Household& h : households_) PlanDay(h);
 }
 
+void Simulation::SetJob(int household, int person, Job job) {
+    if (household < 0 || household >= static_cast<int>(households_.size())) return;
+    Household& h = households_[household];
+    if (person < 0 || person >= static_cast<int>(h.members.size())) return;
+    h.members[person].job = job;
+    PlanDay(h);
+}
+
+void Simulation::Order(int household, int person, Place place) {
+    if (household < 0 || household >= static_cast<int>(households_.size())) return;
+    Household& h = households_[household];
+    if (person < 0 || person >= static_cast<int>(h.members.size())) return;
+    Person& p = h.members[person];
+    if (!p.alive) return;
+    p.orderPlace = place;
+    p.orderUntil = minute_ + static_cast<int64_t>(work_.orderMinutes);
+    PlanDay(h);
+}
+
+void Simulation::CancelOrder(int household, int person) {
+    if (household < 0 || household >= static_cast<int>(households_.size())) return;
+    Household& h = households_[household];
+    if (person < 0 || person >= static_cast<int>(h.members.size())) return;
+    h.members[person].orderUntil = -1;
+    PlanDay(h);
+}
+
 void Simulation::AdjustStores(int household, float food, float firewood) {
     if (household < 0 || household >= static_cast<int>(households_.size())) return;
     Stores& s = households_[household].stores;
-    s.food = std::max(0.0f, s.food + food);
+    if (food >= 0.0f) {
+        s.freshFood += food;
+    } else {
+        // Take from fresh food first, then preserved.
+        const float fromFresh = std::min(s.freshFood, -food);
+        s.freshFood -= fromFresh;
+        s.preservedFood = std::max(0.0f, s.preservedFood - (-food - fromFresh));
+    }
     s.firewood = std::max(0.0f, s.firewood + firewood);
 }
 
@@ -82,7 +121,7 @@ float Simulation::FirewoodDaysLeft(int household) const {
 float Simulation::FoodDaysLeft(int household) const {
     const Household& h = households_[household];
     const float perDay = h.FoodNeededPerDay(needs_);
-    return perDay > 0.0f ? h.stores.food / perDay : 0.0f;
+    return perDay > 0.0f ? h.stores.Food() / perDay : 0.0f;
 }
 
 std::vector<Warning> Simulation::Warnings(int household) const {
@@ -96,12 +135,18 @@ std::vector<Warning> Simulation::Warnings(int household) const {
     } else if (const float days = FirewoodDaysLeft(household); days < needs_.warnDaysLeft) {
         out.push_back({WarningType::FirewoodLow, -1, days, days < 3.0f});
     }
-    if (h.stores.food <= 0.0f) {
+    if (h.stores.Food() <= 0.0f) {
         out.push_back({WarningType::FoodOut, -1, 0.0f, true});
     } else if (const float days = FoodDaysLeft(household); days < needs_.warnDaysLeft) {
         out.push_back({WarningType::FoodLow, -1, days, days < 3.0f});
     }
     if (h.indoorC < 8.0f) out.push_back({WarningType::HouseCold, -1, h.indoorC, h.indoorC < 2.0f});
+    if (h.garden.growth >= 1.0f && h.CropInGround(work_) >= 1.0f) {
+        out.push_back({WarningType::CropReady, -1, h.CropInGround(work_), false});
+    }
+    if (h.stores.freshFood > work_.freshCapacity) {
+        out.push_back({WarningType::StorageFull, -1, h.stores.freshFood - work_.freshCapacity, false});
+    }
 
     for (size_t i = 0; i < h.members.size(); ++i) {
         const Person& p = h.members[i];

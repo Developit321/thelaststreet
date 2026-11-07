@@ -49,56 +49,70 @@ struct Plan {
     Activity activity;
 };
 
-// Where someone is and what they're doing at this time of day. Jobs replace
-// most of this in step 4; for now it is a fixed routine by role.
-Plan Routine(const Person& p, int minuteOfDay, Season season, float outsideC, float light) {
-    const int h = minuteOfDay / 60;
-    const int m = minuteOfDay;
-    if (h < 6 || h >= 21) return {Place::House, Activity::Sleeping};
-    if (p.sick) return {Place::House, Activity::Resting};
-
-    const bool meal = (m >= 6 * 60 + 30 && m < 7 * 60 + 30) || (m >= 11 * 60 + 30 && m < 12 * 60 + 30) ||
-                      (m >= 18 * 60 + 30 && m < 19 * 60 + 30);
-    if (meal) return {Place::House, Activity::Eating};
-    if (m >= 19 * 60 + 30) return {Place::House, Activity::Indoors};
-
-    const bool morning = m < 11 * 60 + 30;
-    const bool daylight = light > 0.3f;
-    const bool workOutside = daylight && outsideC > -18.0f;
-    const bool growing = season != Season::Winter;
-
-    switch (p.role) {
-        case Role::Worker:
-            if (!workOutside) return {Place::House, Activity::Indoors};
-            if (morning || !growing) return {Place::Woodpile, Activity::AtWoodpile};
-            return {Place::Garden, Activity::Gardening};
-        case Role::Homemaker:
-            if (!morning && growing && workOutside && outsideC > 0.0f) {
-                return {Place::Garden, Activity::Gardening};
-            }
-            return {Place::House, Activity::Indoors};
-        case Role::Child:
-            if (!morning && growing && workOutside && outsideC > 0.0f) {
-                return {Place::Garden, Activity::Gardening};
-            }
-            if (daylight && outsideC > -8.0f) return {Place::Yard, Activity::Playing};
-            return {Place::House, Activity::Indoors};
-        case Role::Elder:
-            if (h == 14 && daylight && outsideC > 8.0f) return {Place::Yard, Activity::Resting};
-            return {Place::House, Activity::Resting};
-    }
-    return {Place::House, Activity::Indoors};
+bool IsMealTime(int m) {
+    return (m >= 6 * 60 + 30 && m < 7 * 60 + 30) || (m >= 11 * 60 + 30 && m < 12 * 60 + 30) ||
+           (m >= 18 * 60 + 30 && m < 19 * 60 + 30);
 }
 
 }  // namespace
 
+// Where everyone is and what they're doing right now: a direct order first,
+// then sleep and meals, then their job during working hours.
 void Simulation::PlanDay(Household& household) {
-    const Date date = CurrentDate();
+    const int m = static_cast<int>(minute_ % kMinutesPerDay);
+    const int hour = m / 60;
     const float outside = TemperatureC();
-    const float light = Light();
+    const bool daylight = Light() > 0.3f;
+    const bool canWorkOutside = daylight && outside > work_.tooColdC;
+    const Activity gardenWork = GardenActivity(household);
+
     for (Person& p : household.members) {
         if (!p.alive) continue;
-        const Plan plan = Routine(p, date.minuteOfDay, date.season, outside, light);
+        Plan plan{Place::House, Activity::Indoors};
+
+        if (p.orderUntil >= 0 && minute_ < p.orderUntil) {
+            // Orders override the routine, even at night or in the cold.
+            switch (p.orderPlace) {
+                case Place::Woodpile: plan = {Place::Woodpile, Activity::ChoppingWood}; break;
+                case Place::Garden:
+                    plan = {Place::Garden, gardenWork == Activity::Indoors ? Activity::Waiting : gardenWork};
+                    break;
+                case Place::House: plan = {Place::House, Activity::Resting}; break;
+                case Place::Yard: plan = {Place::Yard, Activity::Waiting}; break;
+            }
+        } else if (hour < 6 || hour >= 21) {
+            plan = {Place::House, Activity::Sleeping};
+        } else if (p.sick) {
+            plan = {Place::House, Activity::Resting};
+        } else if (IsMealTime(m)) {
+            plan = {Place::House, Activity::Eating};
+        } else if (m >= 19 * 60 + 30 || m < 7 * 60 + 30) {
+            plan = {Place::House, Activity::Indoors};
+        } else {
+            switch (p.job) {
+                case Job::Rest:
+                    plan = {Place::House, Activity::Resting};
+                    break;
+                case Job::Firewood:
+                    if (canWorkOutside) plan = {Place::Woodpile, Activity::ChoppingWood};
+                    break;
+                case Job::Garden:
+                    if (canWorkOutside && outside > 0.0f && gardenWork != Activity::Indoors) {
+                        plan = {Place::Garden, gardenWork};
+                    }
+                    break;
+                case Job::Preserve:
+                    if (household.stores.freshFood > 0.01f &&
+                        household.stores.preservedFood < work_.preservedCapacity) {
+                        plan = {Place::House, Activity::Preserving};
+                    }
+                    break;
+            }
+            // Children play outside when there's nothing for them to do.
+            if (plan.activity == Activity::Indoors && p.role == Role::Child && daylight && outside > -8.0f) {
+                plan = {Place::Yard, Activity::Playing};
+            }
+        }
         p.place = plan.place;
         p.activity = plan.activity;
     }
@@ -114,6 +128,7 @@ void Simulation::TickHousehold(int index) {
     PlanDay(h);
     if (minuteOfDay == 6 * 60) MorningChecks(index);
     if (minuteOfDay == 7 * 60 || minuteOfDay == 12 * 60 || minuteOfDay == 19 * 60) Meal(index);
+    DoWork(index);
 
     // The stove: the family keeps the house warm while awake and banks the
     // fire low overnight, as long as there is wood.
@@ -159,7 +174,9 @@ void Simulation::TickHousehold(int index) {
         const float sickness = p.sick ? needs_.sicknessDamagePerDay : 0.0f;
         const float damage = (cold + starving + sickness) * frailty * kPerMinute;
         const bool thriving = !p.sick && p.warmth > 60.0f && p.hunger < 40.0f;
-        const float recovery = thriving ? needs_.recoveryPerDay * kPerMinute : 0.0f;
+        // Resting at home heals twice as fast.
+        const float restBonus = p.activity == Activity::Resting && p.place == Place::House ? 2.0f : 1.0f;
+        const float recovery = thriving ? needs_.recoveryPerDay * restBonus * kPerMinute : 0.0f;
         p.health = std::clamp(p.health - damage + recovery, 0.0f, 100.0f);
 
         p.grief = std::max(0.0f, p.grief - 3.0f * kPerMinute);
@@ -189,12 +206,19 @@ void Simulation::Meal(int index) {
     }
     if (need <= 0.0f) return;
 
-    // Share whatever there is.
-    const float share = std::min(1.0f, h.stores.food / need);
-    const bool hadFood = h.stores.food > 0.0f;
-    h.stores.food = std::max(0.0f, h.stores.food - need * share);
-    h.foodUsedToday += need * share;
-    if (hadFood && h.stores.food <= 0.0f) Emit(EventType::FoodRanOut, index);
+    // Share whatever there is, eating fresh food first because it spoils.
+    Stores& s = h.stores;
+    const bool hadFood = s.Food() > 0.0f;
+    const float share = std::min(1.0f, s.Food() / need);
+    const float eaten = need * share;
+    const float fromFresh = std::min(s.freshFood, eaten);
+    s.freshFood -= fromFresh;
+    s.preservedFood = std::max(0.0f, s.preservedFood - (eaten - fromFresh));
+    h.foodUsedToday += eaten;
+    if (hadFood && s.Food() <= 0.0001f) {
+        s.freshFood = s.preservedFood = 0.0f;
+        Emit(EventType::FoodRanOut, index);
+    }
 
     for (Person& p : h.members) {
         if (!p.alive) continue;
@@ -245,7 +269,10 @@ void Simulation::MorningChecks(int index) {
     }
 }
 
-void Simulation::EndOfDay(Household& household) {
+void Simulation::EndOfDay(int index) {
+    Household& household = households_[index];
+    GardenAndStorageDaily(index, calendar_.DayIndex(minute_) - 1);
+
     const float used = household.firewoodUsedToday;
     household.firewoodPerDay =
         household.firewoodPerDay <= 0.0f ? used : household.firewoodPerDay * 0.5f + used * 0.5f;
