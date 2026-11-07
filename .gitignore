@@ -3,3 +3,12 @@ build/
 assets/blender/
 assets/renders/
 assets/textures/*/
+.godot/
+godot/bin/
+godot/extension/build/
+godot/extension/.sconsign.dblite
+third_party/godot-cpp/gen/
+third_party/godot-cpp/bin/
+*.os
+*.import
+assets/models/*.glb

@@ -6,23 +6,32 @@ A survival and community builder set on a single street in a fictional northern 
 
 **Status:** gameplay prototype, step 4 of 10 (see [`docs/prototype-plan.md`](docs/prototype-plan.md)).
 
-## Run the prototype
+## Run the 3D prototype (Godot)
 
-On a Mac with Xcode installed, from this folder:
+Needs Godot 4.7 in `~/Applications`, Blender in `/Applications` and SCons (`python3 -m pip install --user scons`). From this folder:
+
+```bash
+make godot-run
+```
+
+That builds the simulation library, makes the house model and fetches the textures if they're missing, imports the project and opens the game. You can also open the folder in the Godot editor after running `make godot` once.
+
+## Run the 2D prototype (raylib)
 
 ```bash
 make run
 ```
 
-The first build compiles raylib and takes a minute; later builds are quick.
-
 ## Project layout
 
-- `core/`: the simulation, in plain C++ with no graphics. This moves into Unreal later.
+- `core/`: the simulation, in plain C++ with no graphics. Godot (and later Unreal, if we move) only display it.
 - `loader/`: reads the files in `data/` into core types.
-- `app/`: the throwaway prototype window (raylib).
 - `data/`: game data as text files.
-- `third_party/`: raylib 5.5 and nlohmann/json 3.11.3, with their licences.
+- `project.godot` and `godot/`: the 3D prototype. `godot/extension/` is the C++ bridge (`StreetSim`); `godot/scripts/` builds the world, houses, people, camera and interface.
+- `app/`: the original 2D prototype window (raylib).
+- `tools/blender/`: the house generator.
+- `assets/`: textures (downloaded), models (generated), references.
+- `third_party/`: raylib 5.5, nlohmann/json 3.11.3 and godot-cpp 4.5, with their licences.
 
 ## Contents
 

@@ -1016,6 +1016,29 @@ def render(scene, camera, path):
     bpy.ops.render.render(write_still=True)
 
 
+def export_for_engine(root, key, parts):
+    """Saves the house as assets/models/<key>_house.glb for the game engine.
+
+    Each part stays a separate mesh (Shell, Walls_Full, Walls_Cutaway, Windows,
+    Roof, Interior) so the game can lift the roof and lower the walls. Only
+    material names are exported: the engine builds its own materials from the
+    same photo textures, since Blender's node setups don't carry over."""
+    out_dir = os.path.join(root, "assets", "models")
+    os.makedirs(out_dir, exist_ok=True)
+    for obj in bpy.context.scene.objects:
+        obj.select_set(obj in parts)
+    for col in bpy.data.collections:
+        col.hide_viewport = False
+    bpy.ops.export_scene.gltf(
+        filepath=os.path.join(out_dir, f"{key}_house.glb"),
+        export_format="GLB",
+        use_selection=True,
+        export_apply=True,
+        export_materials="PLACEHOLDER",
+        export_yup=True,
+    )
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     key = argv[argv.index("--house") + 1] if "--house" in argv else "lind"
@@ -1077,6 +1100,9 @@ def main():
                     if space.type == "VIEW_3D":
                         space.shading.type = "MATERIAL"
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(blend_dir, f"{key}.blend"))
+
+    if "--export" in argv:
+        export_for_engine(root, key, parts)
 
     if no_render:
         return

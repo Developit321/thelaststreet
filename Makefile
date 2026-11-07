@@ -43,8 +43,32 @@ APP_CXXFLAGS    := $(CXXFLAGS_COMMON) -Iloader -I$(RAYLIB_SRC) -Wno-missing-fiel
 FRAMEWORKS := -framework Cocoa -framework IOKit -framework CoreVideo \
               -framework OpenGL -framework CoreAudio -framework AudioToolbox
 
-.PHONY: all run clean
+.PHONY: all run clean godot godot-run house textures
 all: $(APP)
+
+# --- The 3D prototype in Godot ---------------------------------------------
+#   make godot       build the simulation library Godot loads
+#   make house       rebuild the house model from Blender (needs Blender)
+#   make textures    download the Poly Haven textures
+#   make godot-run   build everything and open the game
+SCONS  := $(HOME)/Library/Python/3.9/bin/scons
+GODOT  := $(HOME)/Applications/Godot.app/Contents/MacOS/Godot
+BLENDER := /Applications/Blender.app/Contents/MacOS/Blender
+
+godot:
+	cd godot/extension && $(SCONS) platform=macos arch=arm64 target=template_debug disable_exceptions=no -j8
+
+house:
+	$(BLENDER) --background --python tools/blender/build_house.py -- --house lind --no-render --export
+
+textures:
+	sh tools/fetch_textures.sh
+
+godot-run: godot
+	@test -f assets/models/lind_house.glb || $(MAKE) house
+	@test -d assets/textures/roof_09 || $(MAKE) textures
+	$(GODOT) --path . --import
+	$(GODOT) --path .
 
 run: $(APP)
 	./$(APP)

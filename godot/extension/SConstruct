@@ -1,0 +1,33 @@
+# Builds the Godot extension: the simulation in core/, the data loader, and
+# the StreetSim bridge, as one library Godot loads at startup.
+#
+#   cd godot/extension && scons platform=macos arch=arm64 target=template_debug disable_exceptions=no
+#
+# (make godot from the project root does the same.)
+
+import os
+
+ROOT = os.path.abspath("../..")
+
+env = SConscript(os.path.join(ROOT, "third_party/godot-cpp/SConstruct"))
+env.Append(CPPPATH=[
+    "src",
+    os.path.join(ROOT, "core/include"),
+    os.path.join(ROOT, "loader"),
+    os.path.join(ROOT, "third_party"),
+])
+
+# Compile the shared C++ (core and loader) into this folder's build/, so the
+# rest of the project stays clean.
+shared = [os.path.join(ROOT, "core/src", f) for f in sorted(os.listdir(os.path.join(ROOT, "core/src"))) if f.endswith(".cpp")]
+shared.append(os.path.join(ROOT, "loader/data_loader.cpp"))
+objects = [env.SharedObject(target=os.path.join("build", os.path.basename(path)[:-4]), source=path) for path in shared]
+objects += [env.SharedObject(target=os.path.join("build", "ext_" + str(f)[:-4]), source=f) for f in Glob("src/*.cpp")]
+
+name = "libtls.{}.{}".format(env["platform"], env["target"])
+if env["platform"] == "macos":
+    library = env.SharedLibrary("../bin/{0}.framework/{0}".format(name), source=objects)
+else:
+    library = env.SharedLibrary("../bin/{}{}".format(name, env["SHLIBSUFFIX"]), source=objects)
+
+Default(library)

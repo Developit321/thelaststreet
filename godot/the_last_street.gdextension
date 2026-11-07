@@ -1,0 +1,14 @@
+[configuration]
+
+entry_symbol = "tls_library_init"
+compatibility_minimum = "4.5"
+reloadable = true
+
+[libraries]
+
+macos.debug = "res://godot/bin/libtls.macos.template_debug.framework"
+macos.release = "res://godot/bin/libtls.macos.template_release.framework"
+windows.debug.x86_64 = "res://godot/bin/libtls.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "res://godot/bin/libtls.windows.template_release.x86_64.dll"
+linux.debug.x86_64 = "res://godot/bin/libtls.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "res://godot/bin/libtls.linux.template_release.x86_64.so"
