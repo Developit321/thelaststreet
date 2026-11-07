@@ -13,6 +13,8 @@ public:
     void Reset();
 
     const Camera2D& Camera() const { return camera_; }
+    // True on the frame a left click (not a drag) finishes on the world.
+    bool Clicked() const { return clicked_; }
     float PixelsPerMetre() const { return camera_.zoom; }
 
 private:
@@ -29,4 +31,6 @@ private:
     bool dragging_ = false;
     bool dragStarted_ = false;
     Vector2 dragStart_{};
+    bool leftPressOnWorld_ = false;
+    bool clicked_ = false;
 };

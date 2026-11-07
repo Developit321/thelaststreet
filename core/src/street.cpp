@@ -33,7 +33,11 @@ std::string ValidateStreet(const StreetLayout& street) {
         if (plot.bounds.Overlaps(street.road)) return name + " overlaps the road";
         if (!plot.bounds.Contains(plot.house)) return name + ": the house is outside the plot";
         if (!plot.bounds.Contains(plot.garden)) return name + ": the garden is outside the plot";
+        if (!plot.bounds.Contains(plot.woodpile)) return name + ": the woodpile is outside the plot";
         if (plot.house.Overlaps(plot.garden)) return name + ": the house overlaps the garden";
+        if (plot.woodpile.Overlaps(plot.house) || plot.woodpile.Overlaps(plot.garden)) {
+            return name + ": the woodpile overlaps the house or garden";
+        }
 
         for (size_t j = i + 1; j < street.plots.size(); ++j) {
             const Plot& other = street.plots[j];

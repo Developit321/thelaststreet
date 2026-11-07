@@ -1,0 +1,17 @@
+{
+  "households": [
+    {
+      "id": "linds",
+      "plot": "player",
+      "name": "The Linds",
+      "player": true,
+      "stores": { "food": 140, "firewood": 120 },
+      "members": [
+        { "name": "Anders", "age": 38, "role": "worker" },
+        { "name": "Maja", "age": 35, "role": "homemaker" },
+        { "name": "Elin", "age": 10, "role": "child" },
+        { "name": "Grandmother Ingrid", "age": 71, "role": "elder" }
+      ]
+    }
+  ]
+}

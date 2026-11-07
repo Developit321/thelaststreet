@@ -6,6 +6,9 @@
 
 #include "data_loader.h"
 #include "debug_panel.h"
+#include "event_log.h"
+#include "household_view.h"
+#include "panels.h"
 #include "raylib.h"
 #include "season_look.h"
 #include "street_camera.h"
@@ -103,8 +106,8 @@ void DrawBottomBar(Font font, ui::Blockers& blockers) {
     blockers.Add(bar);
     DrawRectangleRec(bar, Fade(BLACK, 0.5f));
     const char* help =
-        "Move: drag, arrows or WASD     Zoom: scroll or + / -     Reset view: R     "
-        "Pause: Space     Speed: 1-4     Debug: ` or F1";
+        "Select: click a person     Move: drag, arrows or WASD     Zoom: scroll or + / -     "
+        "Reset view: R     Pause: Space     Speed: 1-4     Debug: ` or F1";
     ui::Text(font, help, {20, h - 27}, 17);
 }
 
@@ -132,17 +135,29 @@ int main() {
 
     const StreetLoadResult street = LoadStreet(FindDataFile("street.json"));
     const CalendarLoadResult calendar = LoadCalendar(FindDataFile("calendar.json"));
-    const std::string error = !street.ok ? street.error : calendar.error;
-    if (!street.ok || !calendar.ok) {
+    const NeedsLoadResult needs = LoadNeeds(FindDataFile("needs.json"));
+    HouseholdsLoadResult households;
+    if (street.ok) households = LoadHouseholds(FindDataFile("households.json"), street.street);
+
+    std::string error;
+    if (!street.ok) error = street.error;
+    else if (!calendar.ok) error = calendar.error;
+    else if (!needs.ok) error = needs.error;
+    else if (!households.ok) error = households.error;
+    if (!error.empty()) {
         TraceLog(LOG_ERROR, "%s", error.c_str());
         RunErrorScreen(error, font);
         CloseWindow();
         return 1;
     }
 
-    tls::Simulation sim({calendar.calendar, calendar.climate}, street.street);
+    const tls::SimConfig config{calendar.calendar, calendar.climate, needs.needs};
+    tls::Simulation sim(config, street.street, households.households);
     TimeControls time(calendar.pace);
     DebugPanel debug;
+    HouseholdView householdView;
+    EventLog log;
+    Selection selection;
 
     StreetView view;
     view.Init(sim.Street());
@@ -168,8 +183,22 @@ int main() {
         const float dt = GetFrameTime();
         camera.Update(dt, blockers.Contains(GetMousePosition()));
         debug.Update();
-        time.Update(dt, sim);
-        sim.TakeEvents();  // nothing listens yet; the event log arrives in step 3
+        if (!sim.PlayerLost()) time.Update(dt, sim);
+        for (const tls::Event& e : sim.TakeEvents()) log.Add(sim, e);
+        householdView.Update(sim, dt);
+
+        // Clicking a person selects them; clicking empty ground clears it.
+        if (camera.Clicked()) {
+            const Vector2 world = GetScreenToWorld2D(GetMousePosition(), camera.Camera());
+            int h = -1;
+            int p = -1;
+            if (householdView.PersonAt(sim, world, h, p)) {
+                selection.household = h;
+                selection.person = p;
+            } else {
+                selection.Clear();
+            }
+        }
 
         const SceneLook look = ComputeLook(sim);
 
@@ -177,14 +206,29 @@ int main() {
         ClearBackground(kBackground);
         BeginMode2D(camera.Camera());
         view.DrawWorld(sim.Street(), look);
+        householdView.DrawWorld(sim, look, selection.household, selection.person);
         EndMode2D();
         view.DrawAtmosphere(look);
         view.DrawLabels(sim.Street(), camera.Camera(), font);
+        householdView.DrawLabels(sim, camera.Camera(), font, selection.household, selection.person);
 
         blockers.Clear();
         DrawTopBar(sim, time, font, blockers);
         DrawBottomBar(font, blockers);
+        DrawWarnings(sim, font);
+        const float panelBottom = DrawHouseholdPanel(sim, font, blockers, selection);
+        DrawPersonPanel(sim, font, blockers, selection, panelBottom);
+        log.Draw(sim, font, blockers);
         debug.Draw(sim, font, blockers);
+
+        if (sim.PlayerLost() && DrawGameOver(sim, font, blockers)) {
+            sim = tls::Simulation(config, street.street, households.households);
+            sim.TakeEvents();
+            log.Clear();
+            selection.Clear();
+            householdView.Reset();
+            time.SetPaused(false);
+        }
         EndDrawing();
     }
 

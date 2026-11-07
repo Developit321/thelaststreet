@@ -4,7 +4,7 @@
 
 A survival and community builder set on a single street in a fictional northern country around 1900. Build and repair your home, trade with neighbours who remember what you did, and prepare for winters that test every choice.
 
-**Status:** gameplay prototype, step 2 of 10 (see [`docs/prototype-plan.md`](docs/prototype-plan.md)).
+**Status:** gameplay prototype, step 3 of 10 (see [`docs/prototype-plan.md`](docs/prototype-plan.md)).
 
 ## Run the prototype
 

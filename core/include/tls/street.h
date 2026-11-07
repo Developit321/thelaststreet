@@ -18,6 +18,7 @@ struct Plot {
     Rect bounds;
     Rect house;
     Rect garden;
+    Rect woodpile;
 };
 
 // The fixed layout of the street. Everything the simulation later tracks

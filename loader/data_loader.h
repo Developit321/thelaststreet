@@ -33,3 +33,20 @@ struct CalendarLoadResult {
 };
 
 CalendarLoadResult LoadCalendar(const std::string& path);
+
+struct NeedsLoadResult {
+    bool ok = false;
+    std::string error;
+    tls::NeedsConfig needs;
+};
+
+NeedsLoadResult LoadNeeds(const std::string& path);
+
+struct HouseholdsLoadResult {
+    bool ok = false;
+    std::string error;
+    std::vector<tls::Household> households;
+};
+
+// Checks each household against the street, so every one lives on a real plot.
+HouseholdsLoadResult LoadHouseholds(const std::string& path, const tls::StreetLayout& street);

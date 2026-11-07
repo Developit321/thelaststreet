@@ -124,6 +124,7 @@ StreetLoadResult LoadStreet(const std::string& path) {
                 plot.bounds = r.Rect(p, "bounds", where);
                 plot.house = r.Rect(p, "house", where);
                 plot.garden = r.Rect(p, "garden", where);
+                plot.woodpile = r.Rect(p, "woodpile", where);
                 s.plots.push_back(plot);
             }
         }
@@ -188,6 +189,123 @@ CalendarLoadResult LoadCalendar(const std::string& path) {
             r.Fail("pace: 'real_seconds_per_day' must be above 0");
         }
     }
+    if (!r.error.empty()) {
+        result.error = path + ": " + r.error;
+        return result;
+    }
+    result.ok = true;
+    return result;
+}
+
+NeedsLoadResult LoadNeeds(const std::string& path) {
+    NeedsLoadResult result;
+
+    const json root = ReadJson(path, result.error);
+    if (root.is_discarded()) return result;
+
+    Reader r;
+    tls::NeedsConfig& n = result.needs;
+    if (const json* s = r.Field(root, "food", "needs file")) {
+        n.adultRationsPerDay = r.Number(*s, "adult_rations_per_day", "food");
+        n.childRationsPerDay = r.Number(*s, "child_rations_per_day", "food");
+        n.elderRationsPerDay = r.Number(*s, "elder_rations_per_day", "food");
+        n.hungerPerDayUnfed = r.Number(*s, "hunger_per_day_unfed", "food");
+    }
+    if (const json* s = r.Field(root, "house", "needs file")) {
+        n.houseHeatLossPerHour = r.Number(*s, "heat_loss_per_hour", "house");
+        n.stoveHeatPerHour = r.Number(*s, "stove_heat_per_hour", "house");
+        n.stoveBundlesPerHour = r.Number(*s, "stove_bundles_per_hour", "house");
+        n.cookingBundlesPerMeal = r.Number(*s, "cooking_bundles_per_meal", "house");
+        n.comfortableIndoorC = r.Number(*s, "comfortable_indoor_c", "house");
+        n.nightIndoorC = r.Number(*s, "night_indoor_c", "house");
+    }
+    if (const json* s = r.Field(root, "body", "needs file")) {
+        n.comfortableC = r.Number(*s, "comfortable_c", "body");
+        n.freezingC = r.Number(*s, "freezing_c", "body");
+        n.warmthChangePerHour = r.Number(*s, "warmth_change_per_hour", "body");
+        n.coldDamagePerDay = r.Number(*s, "cold_damage_per_day", "body");
+        n.hungerDamagePerDay = r.Number(*s, "hunger_damage_per_day", "body");
+        n.sicknessDamagePerDay = r.Number(*s, "sickness_damage_per_day", "body");
+        n.recoveryPerDay = r.Number(*s, "recovery_per_day", "body");
+    }
+    if (const json* s = r.Field(root, "sickness", "needs file")) {
+        n.sicknessBaseChance = r.Number(*s, "base_chance_per_day", "sickness");
+        n.sicknessColdChance = r.Number(*s, "cold_chance_per_day", "sickness");
+        n.sicknessRecoverChance = r.Number(*s, "recover_chance_per_day", "sickness");
+    }
+    if (const json* s = r.Field(root, "frailty", "needs file")) {
+        n.childFrailty = r.Number(*s, "child", "frailty");
+        n.elderFrailty = r.Number(*s, "elder", "frailty");
+    }
+    if (const json* s = r.Field(root, "warnings", "needs file")) {
+        n.warnDaysLeft = r.Integer(*s, "warn_days_left", "warnings");
+    }
+
+    if (r.error.empty() && n.comfortableC <= n.freezingC) {
+        r.Fail("body: 'comfortable_c' must be above 'freezing_c'");
+    }
+    if (!r.error.empty()) {
+        result.error = path + ": " + r.error;
+        return result;
+    }
+    result.ok = true;
+    return result;
+}
+
+HouseholdsLoadResult LoadHouseholds(const std::string& path, const tls::StreetLayout& street) {
+    HouseholdsLoadResult result;
+
+    const json root = ReadJson(path, result.error);
+    if (root.is_discarded()) return result;
+
+    Reader r;
+    const json* list = r.Field(root, "households", "households file");
+    if (list && !list->is_array()) r.Fail("'households' must be a list");
+
+    int players = 0;
+    if (list && list->is_array()) {
+        for (size_t i = 0; i < list->size() && r.error.empty(); ++i) {
+            const json& h = list->at(i);
+            const std::string where = "households[" + std::to_string(i) + "]";
+            tls::Household household;
+            household.id = r.String(h, "id", where);
+            household.plotId = r.String(h, "plot", where);
+            household.name = r.String(h, "name", where);
+            household.isPlayer = h.is_object() && h.value("player", false);
+            players += household.isPlayer ? 1 : 0;
+
+            if (r.error.empty() && !street.FindPlot(household.plotId)) {
+                r.Fail(where + ": there is no plot '" + household.plotId + "' in the street");
+            }
+            if (const json* s = r.Field(h, "stores", where)) {
+                household.stores.food = r.Number(*s, "food", where + ".stores");
+                household.stores.firewood = r.Number(*s, "firewood", where + ".stores");
+            }
+            if (const json* members = r.Field(h, "members", where)) {
+                if (!members->is_array() || members->empty()) {
+                    r.Fail(where + ": 'members' must be a list with at least one person");
+                } else {
+                    for (size_t m = 0; m < members->size(); ++m) {
+                        const json& pj = members->at(m);
+                        const std::string pw = where + ".members[" + std::to_string(m) + "]";
+                        tls::Person person;
+                        person.name = r.String(pj, "name", pw);
+                        person.age = r.Integer(pj, "age", pw);
+                        const std::string role = r.String(pj, "role", pw);
+                        if (role == "worker") person.role = tls::Role::Worker;
+                        else if (role == "homemaker") person.role = tls::Role::Homemaker;
+                        else if (role == "child") person.role = tls::Role::Child;
+                        else if (role == "elder") person.role = tls::Role::Elder;
+                        else r.Fail(pw + ": 'role' must be worker, homemaker, child or elder");
+                        household.members.push_back(person);
+                    }
+                }
+            }
+            result.households.push_back(household);
+        }
+    }
+    if (r.error.empty() && players != 1) r.Fail("exactly one household must be the player's");
+
     if (!r.error.empty()) {
         result.error = path + ": " + r.error;
         return result;

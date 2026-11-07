@@ -2,20 +2,19 @@
   "country": "Norrvik",
   "street": "Birch Row",
   "units": "metres; x grows east, y grows south",
-
-  "world":   { "x": -20, "y": -30, "w": 170, "h": 160 },
-  "road":    { "x": -20, "y": 50,  "w": 170, "h": 8 },
-  "pump":    { "x": 62,  "y": 54 },
+  "world": { "x": -20, "y": -30, "w": 170, "h": 160 },
+  "road": { "x": -20, "y": 50, "w": 170, "h": 8 },
+  "pump": { "x": 62, "y": 54 },
   "railway_y": -22,
-
   "plots": [
     {
       "id": "haldens",
       "household": "The Haldens",
       "side": "north",
       "bounds": { "x": 12, "y": 18, "w": 26, "h": 30 },
-      "house":  { "x": 20, "y": 36, "w": 10, "h": 9 },
-      "garden": { "x": 14, "y": 20, "w": 12, "h": 10 }
+      "house": { "x": 20, "y": 36, "w": 10, "h": 9 },
+      "garden": { "x": 14, "y": 20, "w": 12, "h": 10 },
+      "woodpile": { "x": 32, "y": 22, "w": 4, "h": 3 }
     },
     {
       "id": "player",
@@ -23,32 +22,36 @@
       "player": true,
       "side": "north",
       "bounds": { "x": 52, "y": 18, "w": 26, "h": 30 },
-      "house":  { "x": 60, "y": 36, "w": 10, "h": 9 },
-      "garden": { "x": 54, "y": 20, "w": 12, "h": 10 }
+      "house": { "x": 60, "y": 36, "w": 10, "h": 9 },
+      "garden": { "x": 54, "y": 20, "w": 12, "h": 10 },
+      "woodpile": { "x": 72, "y": 22, "w": 4, "h": 3 }
     },
     {
       "id": "vosses",
       "household": "The Vosses",
       "side": "north",
       "bounds": { "x": 92, "y": 18, "w": 26, "h": 30 },
-      "house":  { "x": 100, "y": 36, "w": 10, "h": 9 },
-      "garden": { "x": 94, "y": 20, "w": 12, "h": 10 }
+      "house": { "x": 100, "y": 36, "w": 10, "h": 9 },
+      "garden": { "x": 94, "y": 20, "w": 12, "h": 10 },
+      "woodpile": { "x": 112, "y": 22, "w": 4, "h": 3 }
     },
     {
       "id": "petrovs",
       "household": "The Petrovs",
       "side": "south",
       "bounds": { "x": 32, "y": 60, "w": 26, "h": 30 },
-      "house":  { "x": 40, "y": 63, "w": 10, "h": 9 },
-      "garden": { "x": 34, "y": 78, "w": 12, "h": 10 }
+      "house": { "x": 40, "y": 63, "w": 10, "h": 9 },
+      "garden": { "x": 34, "y": 78, "w": 12, "h": 10 },
+      "woodpile": { "x": 52, "y": 80, "w": 4, "h": 3 }
     },
     {
       "id": "mareks",
       "household": "The Mareks",
       "side": "south",
       "bounds": { "x": 72, "y": 60, "w": 26, "h": 30 },
-      "house":  { "x": 80, "y": 63, "w": 10, "h": 9 },
-      "garden": { "x": 74, "y": 78, "w": 12, "h": 10 }
+      "house": { "x": 80, "y": 63, "w": 10, "h": 9 },
+      "garden": { "x": 74, "y": 78, "w": 12, "h": 10 },
+      "woodpile": { "x": 92, "y": 80, "w": 4, "h": 3 }
     }
   ]
 }

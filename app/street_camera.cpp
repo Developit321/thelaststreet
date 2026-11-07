@@ -66,6 +66,12 @@ void StreetCamera::Update(float dt, bool mouseOnUi) {
         dragStarted_ = false;
         dragStart_ = mouse;
     }
+    clicked_ = false;
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) leftPressOnWorld_ = !mouseOnUi;
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+        clicked_ = leftPressOnWorld_ && !dragStarted_;
+        leftPressOnWorld_ = false;
+    }
     if (dragging_ && !anyDown) dragging_ = false;
     if (dragging_) {
         const float moved = std::hypot(mouse.x - dragStart_.x, mouse.y - dragStart_.y);

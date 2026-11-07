@@ -1,0 +1,44 @@
+{
+  "_about": "Balance numbers for food, warmth, health and sickness. Per-day rates are spread evenly across the day.",
+
+  "food": {
+    "adult_rations_per_day": 1.0,
+    "child_rations_per_day": 0.7,
+    "elder_rations_per_day": 0.8,
+    "hunger_per_day_unfed": 35
+  },
+
+  "house": {
+    "heat_loss_per_hour": 0.25,
+    "stove_heat_per_hour": 12,
+    "stove_bundles_per_hour": 0.9,
+    "cooking_bundles_per_meal": 0.3,
+    "comfortable_indoor_c": 18,
+    "night_indoor_c": 12
+  },
+
+  "body": {
+    "comfortable_c": 16,
+    "freezing_c": -6,
+    "warmth_change_per_hour": 30,
+    "cold_damage_per_day": 45,
+    "hunger_damage_per_day": 18,
+    "sickness_damage_per_day": 9,
+    "recovery_per_day": 8
+  },
+
+  "sickness": {
+    "base_chance_per_day": 0.01,
+    "cold_chance_per_day": 0.25,
+    "recover_chance_per_day": 0.3
+  },
+
+  "frailty": {
+    "child": 1.3,
+    "elder": 1.6
+  },
+
+  "warnings": {
+    "warn_days_left": 10
+  }
+}
