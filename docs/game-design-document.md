@@ -109,6 +109,31 @@ Details increase as the camera gets closer: depth of field, ambient sound and ch
 
 ## 6. Core Loop
 
+### Player control (decided)
+The player controls **their own household** (3–6 people), not one character and not the whole street. Neighbours are independent AI and can only be influenced through trade, help, conversation and dilemmas. Neighbours must never be directly controllable, because their ability to refuse, remember and betray is what makes them people.
+
+Three levels of control, from hands-off to hands-on:
+
+| Level | What it is | Example |
+|---|---|---|
+| **1. Daily plan** (automatic) | Each family member has a role and routine and carries on sensibly if left alone | Father chops wood mornings and repairs afternoons; grandmother cooks and minds the child |
+| **2. Jobs** (main decisions) | Reassign people at the start of a day or any time | "Everyone on firewood this week." "Send Anna to help the Petrovs with their roof." |
+| **3. Direct orders** (urgent moments) | Select a family member, then a target | "Trade at the Petrovs' gate." "Grab a bucket, the shed is on fire!" |
+
+- **Dilemmas** appear as event cards with choices. The game pauses and the camera moves in on the moment.
+- **Pause anytime** to give orders; speed controls for quiet stretches.
+- **Input** is select-then-target, which works for both mouse and touch.
+- **Follow camera:** any person (family or neighbour) can be followed up close.
+- **The family changes:** children grow into workers, people fall ill or die, an orphan may be taken in, a son is called to war in Act 3. Losing a family member hurts but play continues while anyone in the household survives.
+
+#### A typical minute
+1. Zoomed out: the woodpile is low, a storm is forecast in 3 days, the Petrovs' chimney is cold.
+2. Assign two family members to firewood and one to check on the Petrovs.
+3. Speed up time and watch the street.
+4. An event: the Petrov grandfather is sick and they're out of wood. Give, trade, or walk away?
+5. Zoom in to watch the choice play out. The Petrovs remember.
+6. Zoom out and get back to preparing for the storm.
+
 ### Season loop
 - **Spring:** repair winter damage, plant, trade surplus, welcome or lose neighbours. Threat: floods.
 - **Summer:** build, upgrade, stockpile. Threats: drought, heat, fire.
@@ -155,10 +180,50 @@ Each neighbour household has:
 - The train brings outside goods for coin, while it runs
 
 ### 7.4 Building
-- Upgrade your house: insulation, stove, roof, root cellar, well, workshop
-- Build outbuildings: woodshed, coop, greenhouse, smokehouse
-- Repair damage after disasters
-- **Shared projects with neighbours:** a second well, a watch rota, a shared greenhouse, rebuilding a burnt house
+The street already exists when the game starts. The player does not lay out a town; they **improve their own plot, keep it standing, and build with the street.** Building is about survival, not decoration.
+
+#### Your plot
+- The player's household owns one plot: the house, a yard, a garden and space at the back.
+- Outbuildings and gardens are **placed on a snapping grid** within the plot.
+- The plot can **grow** by buying or claiming a neighbouring plot (for example when a family leaves). Usually this comes through a dilemma.
+
+#### House upgrades
+The house itself improves through an **upgrade tree, not freeform room building** (far cheaper to build and to animate, and readable from every zoom level). Each upgrade changes the model visibly.
+
+| Part | Upgrades | Effect |
+|---|---|---|
+| Walls | Draughty logs → chinked logs → insulated (moss, clay, boards) | Less heat loss |
+| Roof | Leaking shingles → repaired → tight double layer | Less heat loss, survives storms and snow load |
+| Stove | Open hearth → brick stove → large tiled stove | Heat per log of firewood |
+| Windows | Bare → shutters → double glazing (glass from the train) | Heat loss, light, morale |
+| Cellar | None → root cellar → lined cellar | Food storage, less spoilage |
+| Extension | One room → second room → upper loft | Space for more family members or a taken-in neighbour |
+
+#### Outbuildings (placed in the yard)
+Woodshed (keeps firewood dry), chicken coop, smokehouse (preserves meat and fish), workshop (repairs and tools), greenhouse (early and late crops), well (private water), stable (if you own a horse).
+
+#### How construction works
+- **Materials:** timber and logs (from the forest edge, which visibly recedes if over-cut), stone (fields and the river), clay and moss, plus nails, glass and iron tools that only come by **train or trade.**
+- **Labour:** assign family members. Each project needs a number of work-hours, with faster progress for skilled workers.
+- **Time and weather:** frozen ground blocks foundations; rain and mud slow work; deep winter allows only indoor and emergency work. Building happens mainly from spring to autumn.
+- **Visible stages:** foundation → frame → walls → roof → finished, so progress shows on the street.
+- **Neighbour help:** with good relationships, neighbours join in (a barn-raising), which speeds work. Helping them build earns the same favour back.
+
+#### Condition and repair
+- Every house, the player's and the neighbours', tracks condition per part (roof, walls, stove and chimney, windows).
+- Condition **drops over time and from disasters:** snow load, storms, floods, chimney fires.
+- Poor condition means more heat loss, leaks, fire risk and sickness.
+- Repairs cost materials and labour. Visibly decaying neighbour houses tell the player who is struggling.
+
+#### Empty houses
+When a neighbour household dies out or leaves, its house stands empty. That creates choices:
+- Help a **new family** move in (a new neighbour with their own traits and history)
+- **Take over** the plot to expand your own
+- **Salvage** it for materials (others on the street will have opinions)
+- Leave it to decay as a visible scar on the street
+
+#### Street projects (shared)
+Built on common land by several households pooling materials and labour: a second well, a street greenhouse, a firebreak, a flood wall, a watch hut, a meeting hall, rebuilding a burnt house. Each needs other households to commit, which depends on trust. Some neighbours will contribute less than they promised.
 
 ### 7.5 Seasons and weather
 - Temperature, snowfall and rain simulated over the year
@@ -193,6 +258,57 @@ A director system that paces events based on how the street is doing:
 Family members can die. If the player's household is lost (decided):
 - **Story mode:** the game ends with a **summary of the story:** who helped, who betrayed you, what the street remembers
 - **Endless mode:** the player continues as a surviving neighbour
+
+### 7.9 Progression
+For a first-time player, the game starts small and opens up gradually, so there is always a next goal and each year the household is stronger than the last.
+
+#### A gentle first year (onboarding)
+Systems arrive with the seasons, taught **by the neighbours** rather than pop-up boxes.
+
+| When | What the player learns | How it's introduced |
+|---|---|---|
+| Spring, year 1 | Moving, needs, planting | A friendly old neighbour shows you around |
+| Summer | Chopping wood, stockpiling, simple building | "Winter is long here. Start your woodpile now." |
+| Autumn | Trading, preserving food | The first trade at the gate |
+| Winter, year 1 | Fuel, warmth, sickness | A *mild* first winter: felt, but survivable |
+| Year 2 | Dilemmas, the storyteller, relationships | The first real dilemma: a knock at the door at night |
+
+#### Layers of progress
+- **The house:** visible upgrades from draughty cabin to a warm, sturdy home (§7.4)
+- **Family skills:** people improve at what they do often (wood, trade, healing, building); the grandmother can teach remedies
+- **Relationships:** stranger → acquaintance → friend → family-like. Deeper levels unlock shared tools, borrowing a horse, help in disasters
+- **The street:** shared projects visibly improve the street (§7.4)
+- **Player knowledge:** players learn the signs (geese leaving early means a hard winter; a red sky means a storm)
+
+#### Goals at three scales
+- **Short (today):** "Finish the woodshed roof before the rain."
+- **Medium (this season):** "Stockpile 40 days of firewood before winter."
+- **Long (this year and beyond):** "Build the root cellar." "Earn the Petrovs' trust." "Get everyone through the war."
+
+Shown in a simple season goals panel.
+
+#### Difficulty curve
+- Year 1: a mild winter to learn from
+- Years 2–3: proper winters and the first disasters
+- Story acts raise pressure (rumours → war → sickness)
+- The storyteller adjusts: breathing room for struggling players, tests for comfortable ones
+
+Target feeling: *"Last year I barely made it. This year I'm ready."* Then something new arrives.
+
+#### Rewards
+- The **end-of-winter summary:** who survived, what was built, who helped, how the street changed
+- The street visibly changing over the years: gardens, repairs, new families, children growing up
+- Small moments: a gift left at the door after helping someone; children playing in the snow when morale is high
+
+#### Carry-over between games (mainly endless mode)
+- Unlock new starting conditions: a different family, a harsher region, a poorer start
+- Unlock new neighbour types and events
+- A **street chronicle:** a shareable record of past streets and their stories
+
+#### Never lost, never unfairly punished
+- Warnings before trouble: "Firewood will last 9 more days at this rate."
+- Losses that teach: the summary explains why ("the stove went cold on day 12")
+- Difficulty settings: **Story** (gentler, narrative-focused) and **Harsh** (for survival fans)
 
 ---
 
@@ -270,12 +386,17 @@ Prove the look and camera in Unreal 5:
 
 ### Phase 1: Gameplay prototype (~4–6 weeks)
 **Simple shapes only** (boxes for houses, capsules for people). Prove the fun:
-- 1 player household + 4 neighbour households
-- Needs, traits, memory and relationships
-- 4 seasons and one hard winter
+- 1 player household (family of four) + 4 neighbour households
+- Household control: daily plan, jobs, direct orders (§6)
+- Needs, traits, memory and relationships, with relationship levels
+- 4 seasons, a mild first winter and a hard second winter
 - Bartering
+- Building: 4–5 house upgrades, 3 outbuildings, repairs and condition, one street project (§7.4)
 - 10 dilemma events
 - A basic storyteller
+- First-year onboarding through a neighbour, season goals panel, end-of-winter summary (§7.9)
+
+**Not in the prototype:** family skills, carry-over unlocks, difficulty settings, empty-house choices, story acts.
 
 **Success:** playing it, you want "one more winter." If it isn't fun with boxes, realistic art won't fix it.
 
