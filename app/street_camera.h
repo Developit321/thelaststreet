@@ -8,7 +8,8 @@
 class StreetCamera {
 public:
     void Init(tls::Rect world, tls::Rect focus);
-    void Update(float dt);
+    // mouseOnUi: the cursor is over a panel, so clicks and scrolls belong to it.
+    void Update(float dt, bool mouseOnUi);
     void Reset();
 
     const Camera2D& Camera() const { return camera_; }

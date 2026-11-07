@@ -32,6 +32,16 @@ struct Reader {
         return v->get<float>();
     }
 
+    int Integer(const json& obj, const char* key, const std::string& where) {
+        const json* v = Field(obj, key, where);
+        if (!v) return 0;
+        if (!v->is_number_integer()) {
+            Fail(where + ": '" + key + "' must be a whole number");
+            return 0;
+        }
+        return v->get<int>();
+    }
+
     std::string String(const json& obj, const char* key, const std::string& where) {
         const json* v = Field(obj, key, where);
         if (!v) return {};
@@ -62,24 +72,29 @@ struct Reader {
     }
 };
 
+// Reads and parses a JSON file. On failure, returns a discarded value and
+// fills in the error.
+json ReadJson(const std::string& path, std::string& error) {
+    std::ifstream file(path);
+    if (!file) {
+        error = "could not open " + path;
+        return json(json::value_t::discarded);
+    }
+    std::stringstream text;
+    text << file.rdbuf();
+
+    json root = json::parse(text.str(), nullptr, /*allow_exceptions=*/false);
+    if (root.is_discarded()) error = path + " is not valid JSON";
+    return root;
+}
+
 }  // namespace
 
 StreetLoadResult LoadStreet(const std::string& path) {
     StreetLoadResult result;
 
-    std::ifstream file(path);
-    if (!file) {
-        result.error = "could not open " + path;
-        return result;
-    }
-    std::stringstream text;
-    text << file.rdbuf();
-
-    const json root = json::parse(text.str(), nullptr, /*allow_exceptions=*/false);
-    if (root.is_discarded()) {
-        result.error = path + " is not valid JSON";
-        return result;
-    }
+    const json root = ReadJson(path, result.error);
+    if (root.is_discarded()) return result;
 
     Reader r;
     tls::StreetLayout& s = result.street;
@@ -121,6 +136,60 @@ StreetLoadResult LoadStreet(const std::string& path) {
     const std::string problem = tls::ValidateStreet(s);
     if (!problem.empty()) {
         result.error = path + ": " + problem;
+        return result;
+    }
+    result.ok = true;
+    return result;
+}
+
+CalendarLoadResult LoadCalendar(const std::string& path) {
+    CalendarLoadResult result;
+
+    const json root = ReadJson(path, result.error);
+    if (root.is_discarded()) return result;
+
+    Reader r;
+    if (const json* c = r.Field(root, "calendar", "calendar file")) {
+        result.calendar.startYear = r.Integer(*c, "start_year", "calendar");
+        result.calendar.daysPerSeason = r.Integer(*c, "days_per_season", "calendar");
+        result.calendar.startHour = r.Integer(*c, "start_hour", "calendar");
+    }
+    if (const json* c = r.Field(root, "climate", "calendar file")) {
+        result.climate.meanC = r.Number(*c, "mean_c", "climate");
+        result.climate.seasonalSwingC = r.Number(*c, "seasonal_swing_c", "climate");
+        result.climate.dailySwingC = r.Number(*c, "daily_swing_c", "climate");
+        result.climate.randomnessC = r.Number(*c, "randomness_c", "climate");
+        result.climate.daylightSwingHours = r.Number(*c, "daylight_swing_hours", "climate");
+        result.climate.seed = static_cast<uint32_t>(r.Integer(*c, "seed", "climate"));
+    }
+    if (const json* p = r.Field(root, "pace", "calendar file")) {
+        result.pace.realSecondsPerDay = r.Number(*p, "real_seconds_per_day", "pace");
+        if (const json* speeds = r.Field(*p, "speeds", "pace")) {
+            if (!speeds->is_array() || speeds->empty()) {
+                r.Fail("pace: 'speeds' must be a list of numbers");
+            } else {
+                for (const json& s : *speeds) {
+                    if (!s.is_number() || s.get<float>() <= 0.0f) {
+                        r.Fail("pace: every speed must be a number above 0");
+                        break;
+                    }
+                    result.pace.speeds.push_back(s.get<float>());
+                }
+            }
+        }
+    }
+
+    if (r.error.empty()) {
+        if (result.calendar.daysPerSeason < 1) r.Fail("calendar: 'days_per_season' must be at least 1");
+        if (result.calendar.startHour < 0 || result.calendar.startHour > 23) {
+            r.Fail("calendar: 'start_hour' must be between 0 and 23");
+        }
+        if (result.pace.realSecondsPerDay <= 0.0f) {
+            r.Fail("pace: 'real_seconds_per_day' must be above 0");
+        }
+    }
+    if (!r.error.empty()) {
+        result.error = path + ": " + r.error;
         return result;
     }
     result.ok = true;

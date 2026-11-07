@@ -2,17 +2,23 @@
 
 #include <algorithm>
 #include <string>
+#include <vector>
 
 #include "data_loader.h"
+#include "debug_panel.h"
 #include "raylib.h"
+#include "season_look.h"
 #include "street_camera.h"
 #include "street_view.h"
+#include "time_controls.h"
+#include "tls/simulation.h"
+#include "ui.h"
 
 namespace {
 
 constexpr Color kBackground{24, 30, 24, 255};
-constexpr Color kText{236, 230, 216, 255};
-constexpr Color kMuted{176, 168, 150, 255};
+constexpr float kTopBarHeight = 72.0f;
+constexpr float kBottomBarHeight = 36.0f;
 
 // Finds a data file whether the game is launched from the project folder
 // (make run) or by opening the executable in build/ directly.
@@ -26,13 +32,18 @@ std::string FindDataFile(const char* name) {
 
 // A period serif font from macOS if available, otherwise raylib's built-in one.
 Font LoadUiFont() {
+    // Plain ASCII plus the degree sign, en dash and middle dot.
+    std::vector<int> codepoints;
+    for (int c = 32; c < 127; ++c) codepoints.push_back(c);
+    codepoints.insert(codepoints.end(), {0x00B0, 0x2013, 0x00B7});
+
     const char* candidates[] = {
         "/System/Library/Fonts/Supplemental/Georgia.ttf",
         "/Library/Fonts/Georgia.ttf",
     };
     for (const char* path : candidates) {
         if (FileExists(path)) {
-            Font font = LoadFontEx(path, 40, nullptr, 0);
+            Font font = LoadFontEx(path, 40, codepoints.data(), static_cast<int>(codepoints.size()));
             SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
             return font;
         }
@@ -40,29 +51,70 @@ Font LoadUiFont() {
     return GetFontDefault();
 }
 
-void DrawHud(const tls::StreetLayout& street, const StreetCamera& camera, Font font) {
-    const std::string title = street.streetName + ", " + street.countryName;
-    DrawRectangle(0, 0, GetScreenWidth(), 64, Fade(BLACK, 0.45f));
-    DrawTextEx(font, title.c_str(), {20, 10}, 28, 1, kText);
-    DrawTextEx(font, "The Last Street  -  prototype step 1: the street", {20, 40}, 16, 1, kMuted);
+void DrawTopBar(const tls::Simulation& sim, TimeControls& time, Font font, ui::Blockers& blockers) {
+    const float w = static_cast<float>(GetScreenWidth());
+    const Rectangle bar{0, 0, w, kTopBarHeight};
+    blockers.Add(bar);
+    DrawRectangleRec(bar, Fade(BLACK, 0.5f));
 
-    const std::string zoom = TextFormat("%.1f px per metre", camera.PixelsPerMetre());
-    const Vector2 zoomSize = MeasureTextEx(font, zoom.c_str(), 16, 1);
-    DrawTextEx(font, zoom.c_str(), {GetScreenWidth() - zoomSize.x - 20, 24}, 16, 1, kMuted);
+    // Where and when.
+    const tls::StreetLayout& street = sim.Street();
+    const tls::Date date = sim.CurrentDate();
+    const std::string place = street.streetName + ", " + street.countryName;
+    ui::Text(font, place.c_str(), {20, 10}, 26);
+    const char* when = TextFormat("Day %d of %s, %d  ·  %02d:%02d", date.day,
+                                  tls::SeasonName(date.season), date.year, date.Hour(), date.Minute());
+    ui::Text(font, when, {20, 42}, 18, ui::kMuted);
 
-    const char* help = "Move: drag, arrow keys or WASD    Zoom: scroll or + / -    Reset view: R";
-    const int h = GetScreenHeight();
-    DrawRectangle(0, h - 36, GetScreenWidth(), 36, Fade(BLACK, 0.45f));
-    DrawTextEx(font, help, {20, static_cast<float>(h - 27)}, 18, 1, kText);
+    // Temperature and weather.
+    const float temp = sim.TemperatureC();
+    const char* weather = sim.Snowing() && temp < 1.0f ? "Snowing" : (temp < 0.0f ? "Freezing" : "");
+    const char* tempText = TextFormat("%+.0f°C", temp);
+    const float tempX = w * 0.5f - 60.0f;
+    ui::Text(font, tempText, {tempX, 12}, 30,
+             temp < 0.0f ? Color{170, 200, 236, 255} : Color{236, 210, 160, 255});
+    ui::Text(font, weather, {tempX, 46}, 16, ui::kMuted);
+
+    // Speed buttons: pause plus one per speed.
+    const std::vector<float>& speeds = time.GetPace().speeds;
+    const float bw = 52.0f;
+    const float gap = 6.0f;
+    float x = w - 20.0f - (speeds.size() + 1) * (bw + gap) + gap;
+    if (ui::Button(font, {x, 20, bw, 32}, "Pause", time.Paused())) time.SetPaused(!time.Paused());
+    x += bw + gap;
+    for (size_t i = 0; i < speeds.size(); ++i) {
+        const bool selected = !time.Paused() && time.SpeedIndex() == static_cast<int>(i);
+        if (ui::Button(font, {x, 20, bw, 32}, TextFormat("%gx", speeds[i]), selected)) {
+            time.SetSpeed(static_cast<int>(i));
+        }
+        x += bw + gap;
+    }
+
+    // How far through the season, as a thin bar along the bottom edge.
+    DrawRectangle(0, static_cast<int>(kTopBarHeight) - 3, static_cast<int>(w), 3, Fade(BLACK, 0.6f));
+    DrawRectangle(0, static_cast<int>(kTopBarHeight) - 3, static_cast<int>(w * sim.SeasonProgress()), 3,
+                  ui::kAccent);
+}
+
+void DrawBottomBar(Font font, ui::Blockers& blockers) {
+    const float w = static_cast<float>(GetScreenWidth());
+    const float h = static_cast<float>(GetScreenHeight());
+    const Rectangle bar{0, h - kBottomBarHeight, w, kBottomBarHeight};
+    blockers.Add(bar);
+    DrawRectangleRec(bar, Fade(BLACK, 0.5f));
+    const char* help =
+        "Move: drag, arrows or WASD     Zoom: scroll or + / -     Reset view: R     "
+        "Pause: Space     Speed: 1-4     Debug: ` or F1";
+    ui::Text(font, help, {20, h - 27}, 17);
 }
 
 void RunErrorScreen(const std::string& error, Font font) {
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(kBackground);
-        DrawTextEx(font, "The street data could not be loaded:", {40, 40}, 24, 1, kText);
-        DrawTextEx(font, error.c_str(), {40, 80}, 20, 1, Color{230, 140, 120, 255});
-        DrawTextEx(font, "Fix the file in data/ and launch again.", {40, 120}, 20, 1, kMuted);
+        ui::Text(font, "The game data could not be loaded:", {40, 40}, 24);
+        ui::Text(font, error.c_str(), {40, 80}, 20, Color{230, 140, 120, 255});
+        ui::Text(font, "Fix the file in data/ and launch again.", {40, 120}, 20, ui::kMuted);
         EndDrawing();
     }
 }
@@ -72,26 +124,32 @@ void RunErrorScreen(const std::string& error, Font font) {
 int main() {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
     InitWindow(1280, 800, "The Last Street");
-    SetWindowMinSize(800, 500);
+    SetWindowMinSize(900, 560);
     SetExitKey(KEY_NULL);  // Esc will open menus later; close with the window button or Cmd+Q
     SetTargetFPS(60);
 
     const Font font = LoadUiFont();
-    const StreetLoadResult loaded = LoadStreet(FindDataFile("street.json"));
-    if (!loaded.ok) {
-        TraceLog(LOG_ERROR, "%s", loaded.error.c_str());
-        RunErrorScreen(loaded.error, font);
+
+    const StreetLoadResult street = LoadStreet(FindDataFile("street.json"));
+    const CalendarLoadResult calendar = LoadCalendar(FindDataFile("calendar.json"));
+    const std::string error = !street.ok ? street.error : calendar.error;
+    if (!street.ok || !calendar.ok) {
+        TraceLog(LOG_ERROR, "%s", error.c_str());
+        RunErrorScreen(error, font);
         CloseWindow();
         return 1;
     }
-    const tls::StreetLayout& street = loaded.street;
+
+    tls::Simulation sim({calendar.calendar, calendar.climate}, street.street);
+    TimeControls time(calendar.pace);
+    DebugPanel debug;
 
     StreetView view;
-    view.Init(street);
+    view.Init(sim.Street());
 
     // Start framed on the plots and road rather than the whole forest.
-    tls::Rect focus = street.plots.front().bounds;
-    for (const tls::Plot& plot : street.plots) {
+    tls::Rect focus = sim.Street().plots.front().bounds;
+    for (const tls::Plot& plot : sim.Street().plots) {
         const float left = std::min(focus.x, plot.bounds.x);
         const float top = std::min(focus.y, plot.bounds.y);
         const float right = std::max(focus.Right(), plot.bounds.Right());
@@ -100,18 +158,33 @@ int main() {
     }
     focus = {focus.x - 6.0f, focus.y - 10.0f, focus.w + 12.0f, focus.h + 20.0f};
     StreetCamera camera;
-    camera.Init(street.world, focus);
+    camera.Init(sim.Street().world, focus);
+
+    // UI areas from the previous frame decide whether the mouse belongs to
+    // the camera or to a panel this frame.
+    ui::Blockers blockers;
 
     while (!WindowShouldClose()) {
-        camera.Update(GetFrameTime());
+        const float dt = GetFrameTime();
+        camera.Update(dt, blockers.Contains(GetMousePosition()));
+        debug.Update();
+        time.Update(dt, sim);
+        sim.TakeEvents();  // nothing listens yet; the event log arrives in step 3
+
+        const SceneLook look = ComputeLook(sim);
 
         BeginDrawing();
         ClearBackground(kBackground);
         BeginMode2D(camera.Camera());
-        view.DrawWorld(street);
+        view.DrawWorld(sim.Street(), look);
         EndMode2D();
-        view.DrawLabels(street, camera.Camera(), font);
-        DrawHud(street, camera, font);
+        view.DrawAtmosphere(look);
+        view.DrawLabels(sim.Street(), camera.Camera(), font);
+
+        blockers.Clear();
+        DrawTopBar(sim, time, font, blockers);
+        DrawBottomBar(font, blockers);
+        debug.Draw(sim, font, blockers);
         EndDrawing();
     }
 

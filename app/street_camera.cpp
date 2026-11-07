@@ -38,7 +38,7 @@ void StreetCamera::ZoomAround(Vector2 screenPoint, float factor) {
     camera_.target.y += before.y - after.y;
 }
 
-void StreetCamera::Update(float dt) {
+void StreetCamera::Update(float dt, bool mouseOnUi) {
     // Keep the view centred if the window was resized.
     camera_.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
     minZoom_ = FitZoom(world_);
@@ -61,7 +61,7 @@ void StreetCamera::Update(float dt) {
     const bool anyDown = IsMouseButtonDown(MOUSE_BUTTON_LEFT) ||
                          IsMouseButtonDown(MOUSE_BUTTON_RIGHT) ||
                          IsMouseButtonDown(MOUSE_BUTTON_MIDDLE);
-    if (anyPressed) {
+    if (anyPressed && !mouseOnUi) {
         dragging_ = true;
         dragStarted_ = false;
         dragStart_ = mouse;
@@ -80,7 +80,7 @@ void StreetCamera::Update(float dt) {
     // Zoom: scroll wheel / two-finger scroll toward the cursor, +/- keys
     // toward the centre of the screen.
     const float wheel = GetMouseWheelMove();
-    if (wheel != 0.0f) ZoomAround(mouse, std::exp(wheel * kWheelStep));
+    if (wheel != 0.0f && !mouseOnUi) ZoomAround(mouse, std::exp(wheel * kWheelStep));
     float keyZoom = 0.0f;
     if (IsKeyDown(KEY_EQUAL) || IsKeyDown(KEY_KP_ADD)) keyZoom += 1.0f;
     if (IsKeyDown(KEY_MINUS) || IsKeyDown(KEY_KP_SUBTRACT)) keyZoom -= 1.0f;
