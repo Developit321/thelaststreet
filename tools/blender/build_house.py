@@ -88,11 +88,31 @@ def _ramp(nodes, c1, c2, pos1=0.3, pos2=0.7):
     return ramp
 
 
-def _coords(nodes, links, scale):
+def _coords(nodes, links, scale, projection="object"):
+    """Texture coordinates. 'wall' wraps a texture around vertical faces facing any
+    way (bricks, stones); 'roof' lays it along sloped roofs."""
     tc = nodes.new("ShaderNodeTexCoord")
     mapping = nodes.new("ShaderNodeMapping")
     mapping.inputs["Scale"].default_value = scale
-    links.new(tc.outputs["Object"], mapping.inputs["Vector"])
+    if projection == "object":
+        links.new(tc.outputs["Object"], mapping.inputs["Vector"])
+        return mapping
+    sep = nodes.new("ShaderNodeSeparateXYZ")
+    links.new(tc.outputs["Object"], sep.inputs["Vector"])
+    add = nodes.new("ShaderNodeMath")
+    add.operation = "ADD"
+    comb = nodes.new("ShaderNodeCombineXYZ")
+    if projection == "wall":
+        links.new(sep.outputs["X"], add.inputs[0])
+        links.new(sep.outputs["Y"], add.inputs[1])
+        links.new(add.outputs["Value"], comb.inputs["X"])
+        links.new(sep.outputs["Z"], comb.inputs["Y"])
+    else:  # roof
+        links.new(sep.outputs["X"], comb.inputs["X"])
+        links.new(sep.outputs["Y"], add.inputs[0])
+        links.new(sep.outputs["Z"], add.inputs[1])
+        links.new(add.outputs["Value"], comb.inputs["Y"])
+    links.new(comb.outputs["Vector"], mapping.inputs["Vector"])
     return mapping
 
 
@@ -120,6 +140,36 @@ def mat_noise(name, c1, c2, scale=(1, 1, 1), noise_scale=4.0, rough=0.8, bump=0.
     return mat
 
 
+def mat_stone(name, c1, c2, mortar, rough=0.9, bump=0.8):
+    """Fieldstone: irregular cells with dark gaps between them."""
+    mat, nodes, links, bsdf = _new_material(name)
+    # Voronoi cells are 3D, so they wrap every face without stretching.
+    mapping = _coords(nodes, links, (1, 1, 1))
+    cells = nodes.new("ShaderNodeTexVoronoi")
+    cells.feature = "DISTANCE_TO_EDGE"
+    cells.inputs["Scale"].default_value = 3.2
+    cells.inputs["Randomness"].default_value = 0.8
+    links.new(mapping.outputs["Vector"], cells.inputs["Vector"])
+    colour = nodes.new("ShaderNodeTexVoronoi")
+    colour.inputs["Scale"].default_value = 3.2
+    colour.inputs["Randomness"].default_value = 0.8
+    links.new(mapping.outputs["Vector"], colour.inputs["Vector"])
+    tone = _ramp(nodes, c1, c2, 0.0, 1.0)
+    links.new(colour.outputs["Color"], tone.inputs["Fac"])
+    gap = _ramp(nodes, mortar, (1, 1, 1), 0.05, 0.14)
+    links.new(cells.outputs["Distance"], gap.inputs["Fac"])
+    mix = nodes.new("ShaderNodeMix")
+    mix.data_type = "RGBA"
+    mix.blend_type = "MULTIPLY"
+    mix.inputs["Factor"].default_value = 1.0
+    links.new(tone.outputs["Color"], mix.inputs["A"])
+    links.new(gap.outputs["Color"], mix.inputs["B"])
+    links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = rough
+    _bump(nodes, links, bsdf, cells.outputs["Distance"], bump)
+    return mat
+
+
 def mat_bands(name, c1, c2, direction, scale=1.0, rough=0.8, bump=0.25):
     """Boards and planks: bands along one axis, roughened with noise."""
     mat, nodes, links, bsdf = _new_material(name)
@@ -139,10 +189,11 @@ def mat_bands(name, c1, c2, direction, scale=1.0, rough=0.8, bump=0.25):
     return mat
 
 
-def mat_brick(name, c1, c2, mortar, brick_w, row_h, rough=0.85, bump=0.4, axis_scale=(1, 1, 1)):
+def mat_brick(name, c1, c2, mortar, brick_w, row_h, rough=0.85, bump=0.4, axis_scale=(1, 1, 1),
+              projection="wall"):
     """Bricks, tiles and roof shingles."""
     mat, nodes, links, bsdf = _new_material(name)
-    mapping = _coords(nodes, links, axis_scale)
+    mapping = _coords(nodes, links, axis_scale, projection)
     brick = nodes.new("ShaderNodeTexBrick")
     brick.inputs["Scale"].default_value = 1.0
     brick.inputs["Brick Width"].default_value = brick_w
@@ -176,11 +227,14 @@ def build_materials():
                            scale=(0.25, 6.0, 6.0), noise_scale=3.0, bump=0.35),
         "log_y": mat_noise("Log along Y", (0.07, 0.06, 0.05), (0.20, 0.17, 0.14),
                            scale=(6.0, 0.25, 6.0), noise_scale=3.0, bump=0.35),
-        "log_end": mat_noise("Log end", (0.18, 0.14, 0.10), (0.30, 0.24, 0.18), noise_scale=12.0),
-        "stone": mat_noise("Fieldstone", (0.10, 0.10, 0.10), (0.30, 0.29, 0.27),
-                           noise_scale=5.0, rough=0.9, bump=0.6, detail=4.0),
+        "log_end": mat_noise("Log end", (0.13, 0.10, 0.07), (0.22, 0.17, 0.12), noise_scale=12.0),
+        "stone": mat_stone("Fieldstone", (0.12, 0.12, 0.11), (0.25, 0.24, 0.22), (0.35, 0.35, 0.35)),
         "shingle": mat_brick("Shingles", (0.13, 0.12, 0.10), (0.21, 0.19, 0.16), (0.05, 0.04, 0.04),
-                             brick_w=0.18, row_h=0.22, bump=0.5),
+                             brick_w=0.18, row_h=0.22, bump=0.5, projection="roof"),
+        "shingle_dark": mat_brick("Shingles dark", (0.09, 0.085, 0.075), (0.15, 0.14, 0.12), (0.03, 0.03, 0.03),
+                                  brick_w=0.16, row_h=0.22, bump=0.5, projection="roof"),
+        "shingle_light": mat_brick("Shingles light", (0.18, 0.17, 0.15), (0.26, 0.24, 0.21), (0.06, 0.05, 0.05),
+                                   brick_w=0.2, row_h=0.22, bump=0.5, projection="roof"),
         "brick": mat_brick("Chimney brick", (0.22, 0.08, 0.05), (0.30, 0.12, 0.08), (0.30, 0.28, 0.26),
                            brick_w=0.22, row_h=0.07, bump=0.3),
         "ochre": mat_noise("Ochre paint", (0.30, 0.18, 0.06), (0.42, 0.27, 0.10), noise_scale=9.0, rough=0.7, bump=0.1),
@@ -220,36 +274,39 @@ class MeshBuilder:
             self.materials.append(mat)
         return self.materials.index(mat)
 
-    def _paint_new(self, first_face, mat, smooth=False):
-        self.bm.faces.ensure_lookup_table()
+    @staticmethod
+    def _faces_of(result):
+        """Every face touching the vertices a bmesh operator just created."""
+        return {f for v in result["verts"] for f in v.link_faces}
+
+    def _paint(self, faces, mat, smooth=False):
         idx = self._mat_index(mat)
-        for i in range(first_face, len(self.bm.faces)):
-            f = self.bm.faces[i]
+        for f in faces:
             f.material_index = idx
             f.smooth = smooth and len(f.verts) == 4
 
     def box(self, center, size, mat, rot=(0, 0, 0)):
-        first = len(self.bm.faces)
         m = Matrix.LocRotScale(Vector(center), Euler(rot).to_quaternion(), Vector(size))
-        bmesh.ops.create_cube(self.bm, size=1.0, matrix=m)
-        self._paint_new(first, mat)
+        result = bmesh.ops.create_cube(self.bm, size=1.0, matrix=m)
+        self._paint(self._faces_of(result), mat)
 
-    def cylinder(self, center, radius, length, axis, mat, segments=10, radius2=None):
-        first = len(self.bm.faces)
+    def cylinder(self, center, radius, length, axis, mat, segments=10, radius2=None, cap_mat=None):
         rot = {"X": (0, math.pi / 2, 0), "Y": (math.pi / 2, 0, 0), "Z": (0, 0, 0)}[axis]
         m = Matrix.LocRotScale(Vector(center), Euler(rot).to_quaternion(), Vector((1, 1, 1)))
-        bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=segments,
-                              radius1=radius, radius2=radius if radius2 is None else radius2,
-                              depth=length, matrix=m)
-        self._paint_new(first, mat, smooth=True)
+        result = bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=segments,
+                                       radius1=radius, radius2=radius if radius2 is None else radius2,
+                                       depth=length, matrix=m)
+        faces = self._faces_of(result)
+        self._paint(faces, mat, smooth=True)
+        if cap_mat is not None:
+            # The round ends are the only faces with more than four corners.
+            self._paint([f for f in faces if len(f.verts) > 4], cap_mat)
 
     def poly(self, verts, faces, mat):
         """Any shape from a vertex list and faces given as index tuples."""
-        first = len(self.bm.faces)
         vs = [self.bm.verts.new(Vector(v)) for v in verts]
-        for f in faces:
-            self.bm.faces.new([vs[i] for i in f])
-        self._paint_new(first, mat)
+        made = [self.bm.faces.new([vs[i] for i in f]) for f in faces]
+        self._paint(made, mat)
 
     def prism(self, profile, x0, x1, mat):
         """Extrude a 2D (y, z) outline along X from x0 to x1."""
@@ -263,6 +320,8 @@ class MeshBuilder:
 
     def finish(self, collection):
         mesh = bpy.data.meshes.new(self.name)
+        # Hand-built shapes can come out inside-out; point every face outward.
+        bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
         self.bm.normal_update()
         self.bm.to_mesh(mesh)
         self.bm.free()
@@ -325,13 +384,15 @@ def build_walls(h, mats, collection, rows, name):
         for wall, y in (("front", -hd + r), ("back", hd - r)):
             gaps = openings_on(wall, h)
             for s0, s1 in log_spans(-hw - over, hw + over, z, r, gaps):
-                b.cylinder(((s0 + s1) / 2, y + wobble(), z), r * rng.uniform(0.96, 1.04), s1 - s0, "X", mats["log_x"])
+                b.cylinder(((s0 + s1) / 2, y + wobble(), z), r * rng.uniform(0.96, 1.04), s1 - s0, "X",
+                           mats["log_x"], segments=12, cap_mat=mats["log_end"])
         zs = z + r * 0.5
         for wall, x in (("left", -hw + r), ("right", hw - r)):
             # Side walls are measured along Y; their windows use the same numbers.
             gaps = [(g0, g1, lo, hi) for g0, g1, lo, hi in openings_on(wall, h)]
             for s0, s1 in log_spans(-hd - over, hd + over, zs, r, gaps):
-                b.cylinder((x + wobble(), (s0 + s1) / 2, zs), r * rng.uniform(0.96, 1.04), s1 - s0, "Y", mats["log_y"])
+                b.cylinder((x + wobble(), (s0 + s1) / 2, zs), r * rng.uniform(0.96, 1.04), s1 - s0, "Y",
+                           mats["log_y"], segments=12, cap_mat=mats["log_end"])
     # Inner walls go with the outer ones, so the cutaway lowers both.
     add_partitions(b, h, mats, min(2.6, rows * d))
     return b.finish(collection)
@@ -371,20 +432,43 @@ def build_window_on(b, mats, center, facing, z_bottom, width, height):
     rot = (0, 0, math.atan2(dy, dx) + math.pi / 2)
     zc = z_bottom + height / 2
     t = 0.09  # frame board width
+
+    def carved(outline, n0, n1, mat):
+        """A board cut to an outline given as (u, z) points, n0..n1 out from the wall."""
+        n = len(outline)
+        verts = [at(u, n0, z) for u, z in outline] + [at(u, n1, z) for u, z in outline]
+        faces = [tuple(range(n)), tuple(range(2 * n - 1, n - 1, -1))]
+        for i in range(n):
+            j = (i + 1) % n
+            faces.append((i, n + i, n + j, j))
+        b.poly(verts, faces, mat)
+
     # Frame boards
     b.box(at(-width / 2 - t / 2, 0.06, zc), (t, 0.06, height + 2 * t), mats["ochre"], rot)
     b.box(at(width / 2 + t / 2, 0.06, zc), (t, 0.06, height + 2 * t), mats["ochre"], rot)
-    # Carved crown: a deep board with a small pediment and side ears
+
+    # Carved crown: a bell-shaped pediment with a finial and flicked-up ears.
     top = z_bottom + height
-    b.box(at(0, 0.07, top + 0.13), (width + 0.36, 0.08, 0.24), mats["ochre"], rot)
-    b.box(at(0, 0.08, top + 0.3), (width * 0.55, 0.06, 0.12), mats["ochre"], rot)
-    b.box(at(0, 0.08, top + 0.39), (width * 0.25, 0.06, 0.08), mats["ochre"], rot)
-    for side in (-1, 1):
-        b.box(at(side * (width / 2 + 0.2), 0.08, top + 0.2), (0.08, 0.06, 0.18), mats["ochre"], rot)
-    # Sill and a scalloped apron below
+    cw = width + 0.36
+    upper = []
+    steps = 40
+    for i in range(steps + 1):
+        u = cw / 2 - cw * i / steps
+        bell = math.cos(math.pi * u / cw) ** 2
+        ears = 0.06 * math.exp(-(((abs(u) - cw / 2 + 0.05) / 0.035) ** 2))
+        finial = 0.07 * math.exp(-((u / 0.035) ** 2))
+        upper.append((u, top + 0.12 + 0.17 * bell * width + ears + finial))
+    carved([(-cw / 2, top), (cw / 2, top)] + upper, 0.04, 0.11, mats["ochre"])
+
+    # Sill, and a scalloped apron below it.
     b.box(at(0, 0.1, z_bottom - 0.05), (width + 0.3, 0.14, 0.07), mats["ochre"], rot)
-    b.box(at(0, 0.06, z_bottom - 0.16), (width * 0.7, 0.05, 0.12), mats["ochre"], rot)
-    b.box(at(0, 0.06, z_bottom - 0.25), (width * 0.3, 0.05, 0.08), mats["ochre"], rot)
+    aw = width * 0.9
+    lower = []
+    for i in range(steps + 1):
+        u = -aw / 2 + aw * i / steps
+        taper = 1.0 - (2 * u / aw) ** 2
+        lower.append((u, z_bottom - 0.12 - 0.12 * abs(math.sin(3 * math.pi * u / aw)) * taper))
+    carved([(aw / 2, z_bottom - 0.08), (-aw / 2, z_bottom - 0.08)] + lower, 0.03, 0.08, mats["ochre"])
     # Glass, set back into the wall, with a cross of mullions
     b.box(at(0, -0.08, zc), (width, 0.02, height), mats["glass"], rot)
     b.box(at(0, -0.06, zc), (0.05, 0.04, height), mats["ochre"], rot)
@@ -433,14 +517,22 @@ def build_roof(h, mats, collection):
         deck_mid_z = ridge - (hd + over) / 2 * math.tan(pitch)
         b.box((0, deck_mid_y, deck_mid_z), (x1 - x0, slope_len, 0.08), mats["trim"], (tilt, 0, 0))
 
+        # Each row is laid in short runs of slightly different shingles, so the
+        # roof looks patched and weathered rather than machine-made.
+        shingle_mats = [mats["shingle"], mats["shingle"], mats["shingle_dark"], mats["shingle_light"]]
         row = 0.22
         n_rows = int(slope_len / row)
         for i in range(n_rows):
             dist = slope_len - (i + 0.5) * row          # distance down the slope from the ridge
             y = side * dist * math.cos(pitch)
             z = ridge - dist * math.sin(pitch) + 0.06
-            jitter = rng.uniform(-0.005, 0.005)
-            b.box((0, y, z + jitter), (x1 - x0, row * 1.25, 0.035), mats["shingle"], (tilt - side * 0.06, 0, 0))
+            sx = x0
+            while sx < x1 - 0.05:
+                run = min(rng.uniform(0.8, 2.6), x1 - sx)
+                lift = rng.uniform(-0.008, 0.012)
+                b.box((sx + run / 2, y, z + lift), (run, row * 1.25, 0.035), rng.choice(shingle_mats),
+                      (tilt - side * rng.uniform(0.05, 0.08), 0, 0))
+                sx += run
 
     # Ridge cap
     b.box((0, 0, ridge + 0.1), (x1 - x0 + 0.05, 0.3, 0.12), mats["trim"])
@@ -523,22 +615,44 @@ def build_shell(h, mats, collection):
         while z < post_top - 0.4:
             b.cylinder((px, py, z), 0.1, 0.16, "Z", mats["trim"], segments=8, radius2=0.07)
             z += 0.22
+    # Porch roof: it runs out from the wall, so its ridge is along Y and the
+    # slopes fall to the left and right.
     pr_eave = post_top + 0.05
-    pr_pitch = math.radians(32)
-    pr_rise = (porch_w / 2 + 0.2) * math.tan(pr_pitch)
-    ry0, ry1 = -hd + 0.1, -hd - porch_d - 0.25
-    # Porch roof runs out from the wall, so its ridge is along Y.
+    pr_pitch = math.radians(34)
+    half = porch_w / 2 + 0.25
+    pr_rise = half * math.tan(pr_pitch)
+    ry0, ry1 = -hd + 0.1, -hd - porch_d - 0.3
+    depth = ry0 - ry1
+    mid_y = (ry0 + ry1) / 2
+    slope_len = half / math.cos(pr_pitch)
+    shingle_mats = [mats["shingle"], mats["shingle_dark"], mats["shingle_light"]]
     for side in (-1, 1):
-        half = porch_w / 2 + 0.2
-        mid_x = dx + side * half / 2
-        mid_z = pr_eave + pr_rise / 2
-        length = half / math.cos(pr_pitch)
-        b.box((mid_x, (ry0 + ry1) / 2, mid_z + 0.05), (length, ry0 - ry1, 0.06), mats["shingle"], (0, side * pr_pitch, 0))
-    b.box((dx, (ry0 + ry1) / 2, pr_eave + pr_rise + 0.08), (0.18, ry0 - ry1, 0.1), mats["trim"])
-    gable_y = ry1 + 0.02
-    gable = [(-(porch_w / 2 + 0.2), pr_eave), ((porch_w / 2 + 0.2), pr_eave), (0, pr_eave + pr_rise)]
-    b.poly([(dx + gx, gable_y, gz) for gx, gz in gable] + [(dx + gx, gable_y + 0.05, gz) for gx, gz in gable],
-           [(0, 1, 2), (5, 4, 3), (0, 3, 4, 1), (1, 4, 5, 2), (2, 5, 3, 0)], mats["trim"])
+        tilt = side * pr_pitch
+        # Deck under the shingles.
+        b.box((dx + side * half / 2, mid_y, pr_eave + pr_rise / 2), (slope_len, depth, 0.05), mats["trim"], (0, tilt, 0))
+        # Shingle rows parallel to the ridge, from the eave up.
+        row = 0.2
+        n_rows = int(slope_len / row)
+        for i in range(n_rows):
+            dist = slope_len - (i + 0.5) * row
+            x = dx + side * dist * math.cos(pr_pitch)
+            z = pr_eave + pr_rise - dist * math.sin(pr_pitch) + 0.05
+            b.box((x, mid_y, z), (row * 1.25, depth + 0.04, 0.03), rng.choice(shingle_mats), (0, tilt + side * 0.06, 0))
+        # Barge board along the front edge of each slope.
+        b.box((dx + side * half / 2, ry1 - 0.02, pr_eave + pr_rise / 2 + 0.05), (slope_len + 0.1, 0.05, 0.2),
+              mats["trim"], (0, tilt, 0))
+    b.box((dx, mid_y, pr_eave + pr_rise + 0.08), (0.16, depth + 0.06, 0.1), mats["trim"])
+    # The gable under it, set back a little, with a small carved sunburst.
+    gy = ry1 + 0.12
+    tri = [(-half + 0.1, pr_eave), (half - 0.1, pr_eave), (0, pr_eave + pr_rise - 0.08)]
+    b.poly([(dx + gx, gy, gz) for gx, gz in tri] + [(dx + gx, gy + 0.04, gz) for gx, gz in tri],
+           [(0, 1, 2), (5, 4, 3), (0, 3, 4, 1), (1, 4, 5, 2), (2, 5, 3, 0)], mats["red_boards"])
+    sun_z = pr_eave + pr_rise * 0.35
+    for k in range(7):
+        a = math.pi * (k + 0.5) / 7
+        b.box((dx + math.cos(a) * 0.22, gy - 0.02, sun_z + math.sin(a) * 0.22), (0.05, 0.02, 0.24),
+              mats["ochre"], (0, -(a - math.pi / 2), 0))
+    b.cylinder((dx, gy - 0.02, sun_z), 0.09, 0.03, "Y", mats["ochre"], segments=12)
     return b.finish(collection)
 
 
