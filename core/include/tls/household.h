@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "tls/social.h"
+
 namespace tls {
 
 // A person's part in the household's day. Decides their routine.
