@@ -44,25 +44,41 @@ func _ready() -> void:
 
 	_houses = Houses.new()
 	add_child(_houses)
-	_houses.build(street, _households)
+	_houses.build(street)
 	_world = World.new()
 	add_child(_world)
-	_world.build(street, _households, _houses.wood_material())
+	_world.build(street, _houses.wood_material())
 	_people = People.new()
 	add_child(_people)
 	_people.build(street)
 
 	_camera = CameraRig.new()
+	_camera.name = "CameraRig"
 	add_child(_camera)
 	var area: Rect2 = street.plots[0].bounds
 	for p in street.plots:
 		area = area.merge(p.bounds)
-	_camera.frame(Vector3(area.get_center().x, 0, area.get_center().y), 95.0)
+	# Looking along the street from the east, like the concept art.
+	_camera.frame(Vector3(area.get_center().x, 0, area.get_center().y), 78.0, deg_to_rad(62.0))
 	_camera.clicked.connect(_on_ground_clicked)
 
 	_hud = Hud.new()
 	add_child(_hud)
 	_hud.setup(self, _households, player, _speeds)
+
+	# Screenshot mode: Godot --path . -- --capture=<folder> [--shots=a,b]
+	var folder := ""
+	var shots := []
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--capture="):
+			folder = arg.trim_prefix("--capture=")
+		elif arg.begins_with("--shots="):
+			shots = Array(arg.trim_prefix("--shots=").split(","))
+	if folder != "":
+		_hud.visible = false
+		var capture := preload("res://godot/scripts/capture.gd").new()
+		add_child(capture)
+		capture.run(self, folder, shots)
 
 
 func _read_pace() -> void:
@@ -117,12 +133,14 @@ func _process(delta: float) -> void:
 ## when someone inside is selected.
 func _update_cutaways() -> void:
 	var close: bool = _camera.distance < 45.0
+	var selected_house := -1
+	if selected.x >= 0 and int(_households[selected.x].members[selected.y].place) == 0:
+		selected_house = _houses.index_for_plot(_households[selected.x].plot)
 	for i in _houses.houses.size():
 		var plot: Dictionary = _houses.houses[i].plot
 		var c: Vector2 = (plot.house as Rect2).get_center()
-		var near: bool = Vector2(_camera.target.x, _camera.target.z).distance_to(c) < 14.0
-		var someone_selected_inside: bool = selected.x == i and int(_households[i].members[selected.y].place) == 0
-		_houses.set_open(i, (close and near) or (someone_selected_inside and _camera.distance < 80.0))
+		var near: bool = Vector2(_camera.target.x, _camera.target.z).distance_to(c) < 12.0
+		_houses.set_open(i, (close and near) or (i == selected_house and _camera.distance < 80.0))
 
 
 func _unhandled_input(event: InputEvent) -> void:

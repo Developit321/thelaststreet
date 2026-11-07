@@ -1025,16 +1025,23 @@ def export_for_engine(root, key, parts):
     same photo textures, since Blender's node setups don't carry over."""
     out_dir = os.path.join(root, "assets", "models")
     os.makedirs(out_dir, exist_ok=True)
-    for obj in bpy.context.scene.objects:
-        obj.select_set(obj in parts)
+    # Every part must be visible to be exported, including the cutaway walls.
     for col in bpy.data.collections:
         col.hide_viewport = False
+        col.hide_render = False
+    for layer in bpy.context.view_layer.layer_collection.children:
+        layer.exclude = False
+        layer.hide_viewport = False
+    for obj in bpy.context.scene.objects:
+        obj.hide_set(False)
+        obj.select_set(obj in parts)
     bpy.ops.export_scene.gltf(
         filepath=os.path.join(out_dir, f"{key}_house.glb"),
         export_format="GLB",
         use_selection=True,
         export_apply=True,
-        export_materials="PLACEHOLDER",
+        export_materials="EXPORT",  # the engine matches materials by these names
+        export_image_format="NONE",  # it uses its own copies of the textures
         export_yup=True,
     )
 

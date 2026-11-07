@@ -106,7 +106,7 @@ func update(households: Array, houses: Node, selected: Vector2i, delta: float) -
 			if node.position.distance_to(flat) < 0.05:
 				node.position.y = target.y
 			var inside: bool = int(person.place) == 0
-			node.visible = not inside or houses.is_open(h)
+			node.visible = not inside or houses.is_open(houses.index_for_plot(household.plot))
 
 	_ring.visible = false
 	if _figures.has(selected):

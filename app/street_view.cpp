@@ -171,6 +171,7 @@ void StreetView::DrawLabels(const tls::StreetLayout& street, const Camera2D& cam
     const float spacing = 1.0f;
 
     for (const tls::Plot& plot : street.plots) {
+        if (plot.household.empty()) continue;  // nobody living there yet
         const std::string text = plot.isPlayer ? plot.household + " (you)" : plot.household;
         // Label just outside the back fence, so it never covers the house.
         const bool north = plot.side == tls::StreetSide::North;

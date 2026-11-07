@@ -19,6 +19,7 @@ var camera: Camera3D
 
 var _home_target := Vector3.ZERO
 var _home_distance := 90.0
+var _home_yaw := 0.0
 var _dragging := false
 var _drag_moved := false
 var _drag_start := Vector2.ZERO
@@ -39,16 +40,17 @@ func set_ui_check(check: Callable) -> void:
 	_ui_blocks = check
 
 
-func frame(centre: Vector3, view_distance: float) -> void:
+func frame(centre: Vector3, view_distance: float, view_yaw := 0.0) -> void:
 	_home_target = centre
 	_home_distance = view_distance
+	_home_yaw = view_yaw
 	reset()
 
 
 func reset() -> void:
 	target = _home_target
 	distance = _home_distance
-	yaw = 0.0
+	yaw = _home_yaw
 
 
 ## 1 when zoomed right in, 0 at the widest view.
