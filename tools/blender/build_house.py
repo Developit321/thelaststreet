@@ -932,8 +932,15 @@ def main():
     cutaway = [cols["Walls_Cutaway"]]
     full = [cols["Walls_Full"], cols["Windows"], cols["Roof"]]
 
-    # Default state saved in the file: the closed house.
+    # Default state saved in the file: the closed house, shown with its
+    # materials (not Blender's plain grey Solid view) when opened.
     set_visible(cutaway, False)
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            if area.type == "VIEW_3D":
+                for space in area.spaces:
+                    if space.type == "VIEW_3D":
+                        space.shading.type = "MATERIAL"
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(blend_dir, f"{key}.blend"))
 
     if no_render:
