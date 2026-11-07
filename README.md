@@ -28,6 +28,8 @@ The first build compiles raylib and takes a minute; later builds are quick.
 
 - [`docs/game-design-document.md`](docs/game-design-document.md): the full design: setting, systems, story acts, tech, asset pipeline and plan
 - [`docs/prototype-plan.md`](docs/prototype-plan.md): the step-by-step plan for the gameplay prototype
+- [`docs/asset-prompts.md`](docs/asset-prompts.md): reference image prompts for every asset
+- [`docs/asset-pilot.md`](docs/asset-pilot.md): the one-house asset pilot
 - [`reference/concept-art/`](reference/concept-art/): AI-generated concept art used as the visual target (internal reference only)
 
 ## Next steps
