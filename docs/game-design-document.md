@@ -169,6 +169,7 @@ Each neighbour household has:
 - **Traits:** 2–3 per adult, for example *generous, proud, paranoid, lazy, devout, grudge-holder, skilled carpenter, healer, gossip, kind to children*. Traits affect how they trade, help and react.
 - **Memory:** a log of significant things the player (and other neighbours) did. *"Gave us wood during the blizzard." "Charged triple when our child was sick." "Refused to help sandbag."* Memories fade slowly, but big ones last forever.
 - **Relationship score with every other household,** not just the player, so neighbours can fall out with each other too.
+- **Street standing:** alongside individual relationships, each household (including the player's) has a street-wide reputation built from how it has treated the street as a whole: sharing in hard times, joining street projects, keeping promises, taking in the needy. Standing decides how much weight a household's voice carries in street decisions such as plot takeovers (§7.4), and how others react to its requests. Hoarding, cheating and taking advantage of others' misfortune lower it, and it recovers slowly.
 - **Their own life:** routines, work, visits, arguments, celebrations, births and deaths, whether or not the player is watching.
 
 **Dialogue** comes from written templates filled in from simulation state, not from a live language model. That keeps it offline, consistent and cheap. For example: *"After what you did in the flood, [name] won't open the door."*
@@ -185,7 +186,7 @@ The street already exists when the game starts. The player does not lay out a to
 #### Your plot
 - The player's household owns one plot: the house, a yard, a garden and space at the back.
 - Outbuildings and gardens are **placed on a snapping grid** within the plot.
-- The plot can **grow** by buying or claiming a neighbouring plot (for example when a family leaves). Usually this comes through a dilemma.
+- The plot can only grow by taking over another plot, and that is **never free.** It needs leverage and the street's consent (see *Taking over a plot* below).
 
 #### House upgrades
 The house itself improves through an **upgrade tree, not freeform room building** (far cheaper to build and to animate, and readable from every zoom level). Each upgrade changes the model visibly.
@@ -216,11 +217,35 @@ Woodshed (keeps firewood dry), chicken coop, smokehouse (preserves meat and fish
 - Repairs cost materials and labour. Visibly decaying neighbour houses tell the player who is struggling.
 
 #### Empty houses
-When a neighbour household dies out or leaves, its house stands empty. That creates choices:
-- Help a **new family** move in (a new neighbour with their own traits and history)
-- **Take over** the plot to expand your own
-- **Salvage** it for materials (others on the street will have opinions)
+This is **the last street.** Every house that goes cold is one less family, one less pair of hands, one step closer to the street dying. The street feels that, and so should the player.
+
+When a neighbour household dies out or leaves, its house stands empty. The choices:
+- Help a **new family** move in (a new neighbour with their own traits and history). The street almost always prefers this.
+- **Take over** the plot to expand your own (hard; see below)
+- **Salvage** it for materials (needs the street's consent, just like a takeover)
 - Leave it to decay as a visible scar on the street
+
+#### Taking over a plot
+A player **cannot simply claim** a plot. It needs both a **claim** and the **street's consent.**
+
+**1. A claim: a legitimate reason it should be yours.** At least one of:
+
+| Claim | How it's earned |
+|---|---|
+| **Purchase** | A family that is leaving agrees to sell. They must trust you, and you need coin or goods they value. |
+| **Debt** | The household owes you heavily. Collecting this way is legal but harsh, and the street will judge it. |
+| **Kinship** | A family tie: an orphan from that house you took in, a marriage between households, an elder who names you their heir. |
+| **Caretaking** | You kept the empty house standing (heated, repaired, protected) for at least a season, with the street's knowledge. |
+| **Street grant** | The street gives it to you, for example in thanks for getting them through a disaster. |
+
+**2. Consent: the street must accept it.**
+- The remaining households weigh in, based on their relationship with you, your **street standing** (§7.2) and their traits. A proud or grudge-holding neighbour may object on principle; a family you saved will back you.
+- A majority must accept. Elders' opinions count for more.
+- Even with consent, a takeover **costs standing with some households.** Expanding while others struggle is noticed.
+
+**3. No claim or no consent means no takeover.** There is no way to simply grab land. Pushing for it anyway (pressing a weak claim, calling in a debt from a grieving family) is a dilemma in its own right, with lasting consequences.
+
+**Why it's built this way:** in a dying street, land is not the scarce resource. **People** are. Expansion should feel rare, earned and morally weighted, and the game should constantly ask: *is this house worth more to you, or to a family who could live in it?*
 
 #### Street projects (shared)
 Built on common land by several households pooling materials and labour: a second well, a street greenhouse, a firebreak, a flood wall, a watch hut, a meeting hall, rebuilding a burnt house. Each needs other households to commit, which depends on trust. Some neighbours will contribute less than they promised.
