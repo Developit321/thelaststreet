@@ -209,6 +209,60 @@ def mat_brick(name, c1, c2, mortar, brick_w, row_h, rough=0.85, bump=0.4, axis_s
     return mat
 
 
+TEXTURES = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "textures"))
+
+
+def _image(nodes, path, colour, mapping, links):
+    tex = nodes.new("ShaderNodeTexImage")
+    tex.image = bpy.data.images.load(path, check_existing=True)
+    tex.image.colorspace_settings.name = "sRGB" if colour else "Non-Color"
+    # Box projection wraps the photo around any shape without UV maps.
+    tex.projection = "BOX"
+    tex.projection_blend = 0.25
+    links.new(mapping.outputs["Vector"], tex.inputs["Vector"])
+    return tex
+
+
+def mat_photo(name, texture, size_m, ramp=None, value=1.0, saturation=1.0, rough_scale=1.0, normal=1.0):
+    """A Poly Haven photo texture at its real size.
+
+    ramp: optional (dark, light) colours to repaint it, keeping only its light
+    and shade, for painted wood in our own colours."""
+    folder = os.path.join(TEXTURES, texture)
+    if not os.path.isdir(folder):
+        return None
+    mat, nodes, links, bsdf = _new_material(name)
+    mapping = _coords(nodes, links, (1 / size_m,) * 3)
+    diff = _image(nodes, os.path.join(folder, f"{texture}_diff_2k.jpg"), True, mapping, links)
+    rough = _image(nodes, os.path.join(folder, f"{texture}_rough_2k.jpg"), False, mapping, links)
+    nor = _image(nodes, os.path.join(folder, f"{texture}_nor_gl_2k.jpg"), False, mapping, links)
+
+    colour = diff.outputs["Color"]
+    if ramp:
+        bw = nodes.new("ShaderNodeRGBToBW")
+        links.new(colour, bw.inputs["Color"])
+        r = _ramp(nodes, ramp[0], ramp[1], 0.15, 0.75)
+        links.new(bw.outputs["Val"], r.inputs["Fac"])
+        colour = r.outputs["Color"]
+    hsv = nodes.new("ShaderNodeHueSaturation")
+    hsv.inputs["Saturation"].default_value = saturation
+    hsv.inputs["Value"].default_value = value
+    links.new(colour, hsv.inputs["Color"])
+    links.new(hsv.outputs["Color"], bsdf.inputs["Base Color"])
+
+    rmul = nodes.new("ShaderNodeMath")
+    rmul.operation = "MULTIPLY"
+    rmul.inputs[1].default_value = rough_scale
+    links.new(rough.outputs["Color"], rmul.inputs[0])
+    links.new(rmul.outputs["Value"], bsdf.inputs["Roughness"])
+
+    nmap = nodes.new("ShaderNodeNormalMap")
+    nmap.inputs["Strength"].default_value = normal
+    links.new(nor.outputs["Color"], nmap.inputs["Color"])
+    links.new(nmap.outputs["Normal"], bsdf.inputs["Normal"])
+    return mat
+
+
 def mat_plain(name, color, rough=0.6, alpha=1.0, metallic=0.0):
     mat, nodes, links, bsdf = _new_material(name)
     bsdf.inputs["Base Color"].default_value = (*color, 1)
@@ -222,6 +276,35 @@ def mat_plain(name, color, rough=0.6, alpha=1.0, metallic=0.0):
 
 
 def build_materials():
+    mats = procedural_materials()
+    # Photo textures from Poly Haven (CC0) replace the procedural ones where
+    # they've been downloaded into assets/textures/.
+    photo = {
+        "log_x": mat_photo("Logs (photo)", "weathered_brown_planks", 2.4, value=0.75, saturation=0.7),
+        "shingle": mat_photo("Shingles (photo)", "roof_09", 3.2, value=0.7, saturation=0.45),
+        "shingle_dark": mat_photo("Shingles dark (photo)", "roof_09", 3.0, value=0.5, saturation=0.4),
+        "shingle_light": mat_photo("Shingles light (photo)", "roof_09", 3.4, value=0.85, saturation=0.5),
+        "stone": mat_photo("Fieldstone (photo)", "rustic_stone_wall", 1.3, value=0.8, saturation=0.6),
+        "brick": mat_photo("Chimney brick (photo)", "red_brick_03", 1.0, value=0.85),
+        "red_boards": mat_photo("Red boards (photo)", "distressed_painted_planks", 1.6,
+                                ramp=((0.10, 0.02, 0.015), (0.30, 0.06, 0.045))),
+        "red_door": mat_photo("Red door (photo)", "distressed_painted_planks", 1.2,
+                              ramp=((0.11, 0.02, 0.016), (0.32, 0.07, 0.05))),
+        "ochre": mat_photo("Ochre paint (photo)", "distressed_painted_planks", 1.0,
+                           ramp=((0.24, 0.13, 0.04), (0.55, 0.36, 0.13))),
+        "trim": mat_photo("Trim (photo)", "weathered_brown_planks", 2.0, value=0.6, saturation=0.6),
+        "floor": mat_photo("Floor (photo)", "old_planks_02", 2.0, value=0.8),
+        "planks": mat_photo("Planks (photo)", "old_planks_02", 1.6, value=0.9),
+    }
+    if photo["log_x"]:
+        photo["log_y"] = photo["log_x"]
+    for key, mat in photo.items():
+        if mat is not None:
+            mats[key] = mat
+    return mats
+
+
+def procedural_materials():
     return {
         "log_x": mat_noise("Log along X", (0.07, 0.06, 0.05), (0.20, 0.17, 0.14),
                            scale=(0.25, 6.0, 6.0), noise_scale=3.0, bump=0.35),
