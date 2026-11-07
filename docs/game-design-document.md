@@ -52,8 +52,11 @@ Begins **around 1900.** No electricity on the street. Hand water pumps, wood sto
 - Birch and pine forest around the edges, fields beyond
 - The **railway line** in the distance: trade goods arrive by train, and the train is how news (and the war) reaches the street
 
-### Open decision: architecture
-The concept art reads strongly as a traditional Russian village (log houses with carved window frames). To make the country feel like its own place, consider blending in other northern influences: painted Scandinavian wood (deep red, ochre), stone foundations, turf or shingle roofs, and invented decorative details. **Decide before 3D asset production.**
+### Architecture (decided)
+A **blend of northern influences**, so the country feels like its own place rather than a Russian village. Keep the log houses and carved window frames from the concept art, and mix in painted wood (deep red, ochre), stone foundations, shingle or turf roofs, and a few invented decorative details unique to this country.
+
+### Mood (decided)
+**Hard but hopeful.** Losses hurt and winters are dangerous, but kindness pays off and the street can come through together.
 
 ---
 
@@ -187,9 +190,9 @@ A director system that paces events based on how the street is doing:
 14. A letter arrives for a neighbour who is away. It's bad news. Do you open it?
 
 ### 7.8 Losing
-Family members can die. If the player's household is lost, the game does not just end:
-- It shows a **summary of the story:** who helped, who betrayed you, what the street remembers
-- In endless mode, the player may continue as a surviving neighbour
+Family members can die. If the player's household is lost (decided):
+- **Story mode:** the game ends with a **summary of the story:** who helped, who betrayed you, what the street remembers
+- **Endless mode:** the player continues as a surviving neighbour
 
 ---
 
@@ -295,8 +298,10 @@ Steam (possibly Early Access). Mobile 6–12 months later if it succeeds.
 - **Steam Next Fest** with a polished one-winter demo.
 - **AI disclosure:** Steam requires disclosing AI-generated content players see or hear, including store art. Prefer real in-game screenshots or an artist-made capsule for the store; keep AI art as internal reference.
 
-### Tagline options
-- *No one is coming. We only have each other.*
+### Tagline (decided)
+**"No one is coming. We only have each other."**
+
+Alternatives for trailers and other uses:
 - *Survive the winter. Together, or not at all.*
 - *One street. Every winter.*
 - *One street. Twenty years. A war that never reaches it, and changes everything.*
@@ -305,10 +310,14 @@ Steam (possibly Early Access). Mobile 6–12 months later if it succeeds.
 
 ## 14. Open Decisions
 
-- [ ] Architecture: Russian-style village, or a blend of northern influences?
-- [ ] Name of the fictional country and of the street
-- [ ] Tagline
-- [ ] Mood balance: how bleak versus how hopeful
-- [ ] Can the player lose permanently, or always recover?
+- [x] Architecture: a blend of northern influences (§3)
+- [ ] Name of the fictional country and of the street (shortlist below)
+- [x] Tagline: "No one is coming. We only have each other." (§13)
+- [x] Mood: hard but hopeful (§3)
+- [x] Losing: story mode ends with a summary; endless mode continues as a neighbour (§7.8)
 - [ ] Trademark check on "The Last Street" before launch
-- [ ] Install Unreal Engine 5 and confirm disk space
+- [ ] Development machine for Unreal 5. The current MacBook Air (M1, 8 GB RAM, ~54 GB free, no admin rights) is not enough for UE5.
+
+### Name shortlist
+**Country:** Varnholm · Kaldria · Norrvik · Velmark · Hollvaen
+**Street:** Birch Row · Pump Lane · Railway Street · Ember Lane · Kettle Row
