@@ -1,8 +1,8 @@
 # The Last Street — Game Design Document
 
-**Version:** 0.1 (planning)
-**Last updated:** 2026-11-07
-**Status:** Pre-production. Nothing built yet.
+**Version:** 0.2 (the street as one body)
+**Last updated:** 2026-11-08
+**Status:** Pre-production. The simulation is built through prototype step 4. The game is moving to Unreal.
 
 > *In a cold northern land at the turn of the century, one street must survive the winters together.*
 
@@ -14,7 +14,7 @@
 |---|---|
 | **Genre** | Survival / community builder with neighbour simulation |
 | **Setting** | A fictional cold northern country, around 1900 |
-| **Scale** | One single street, ~12–15 households |
+| **Scale** | One single street: 12 plots, about 6 households (~25 people) still living there, the rest already empty |
 | **Player role** | One household on the street |
 | **Camera** | Strategy-style overhead view that zooms smoothly down to street level and into homes |
 | **Look** | Realistic historical simulation (Unreal Engine 5), natural light, weathered materials |
@@ -23,17 +23,19 @@
 
 ### The hook
 
-Most survival builders put you alone in the wilderness. **The Last Street** puts you on one street with neighbours you know by name. The seasons and disasters are the pressure. The relationships are the game.
+Most survival games are about you collecting enough stuff. In **The Last Street, nobody can survive alone, by design.** No household can cover everything it needs, so your neighbours are your main survival system, and every person who dies takes something away for good. The last train has stopped, and everything from the old world is running out. The street has to learn to make what it needs before it's gone.
 
 ---
 
 ## 2. Design Pillars
 
-1. **The neighbours are the game.** Every household has needs, personality and memory. They remember what you did.
-2. **Winter is the boss.** The seasons are a clock. Every choice in spring, summer and autumn is tested in winter.
-3. **Hard choices, no right answers.** Dilemmas trade your family's safety against your neighbours'. Consequences are remembered.
-4. **One street, seen up close.** The camera moves from the whole street to a family by the stove. Zooming in should always show something happening.
-5. **The street changes over time.** Gardens grow, houses empty, people are born and lost. After twenty years the street tells your story.
+1. **Nobody survives alone.** Every household holds a piece of what the street needs. Your neighbours are your survival system, and they can refuse.
+2. **Every loss is permanent.** When someone dies, what they knew and could do goes with them, unless someone learned it first.
+3. **The old world runs out.** Salt, iron, matches, lamp oil and medicine only ever go down. The long game is replacing each one before it's gone.
+4. **Winter is the boss.** The seasons are a clock. Every choice in spring, summer and autumn is tested in winter.
+5. **Hard choices, no right answers.** Dilemmas trade your family's safety against your neighbours'. Consequences are remembered.
+6. **One street, seen up close.** The camera moves from the whole street to a family by the stove. Zooming in should always show something happening.
+7. **The street shows what happened.** Gardens grow, houses empty, some are burned for fuel, people are born and lost. The street's shape tells your story.
 
 ---
 
@@ -43,14 +45,14 @@ Most survival builders put you alone in the wilderness. **The Last Street** puts
 A **fictional northern country** inspired by cold rural regions (Scandinavia, Eastern Europe, Canada) without being any of them. The country, its towns and its traditions are invented, which gives freedom and avoids real-world politics.
 
 ### Era
-Begins **around 1900.** No electricity on the street. Hand water pumps, wood stoves, oil lamps, horses and carts. A railway line passes nearby and links the street to the outside world.
+Begins **around 1900.** No electricity on the street. Hand water pumps, wood stoves, oil lamps, horses and carts. A railway line passes nearby and links the street to the outside world, until the off-screen war stops the trains.
 
 ### The street
-- ~12–15 timber and stone houses facing each other along a muddy dirt road
+- 12 timber and stone houses facing each other along a muddy dirt road, about half still lived in when the game begins
 - Fenced yards with vegetable gardens, sheds, chicken coops, woodpiles
 - A shared **hand water pump** in the middle of the street (a natural gathering point)
 - Birch and pine forest around the edges, fields beyond
-- The **railway line** in the distance: trade goods arrive by train, and the train is how news (and the war) reaches the street
+- The **railway line** in the distance: trade goods and news arrive by train, until the **last train** stops coming
 
 ### Architecture (decided)
 A **blend of northern influences**, so the country feels like its own place rather than a Russian village. Keep the log houses and carved window frames from the concept art, and mix in painted wood (deep red, ochre), stone foundations, shingle or turf roofs, and a few invented decorative details unique to this country.
@@ -131,7 +133,7 @@ Three levels of control, from hands-off to hands-on:
 - **Pause anytime** to give orders; speed controls for quiet stretches.
 - **Input** is select-then-target, which works for both mouse and touch.
 - **Follow camera:** any person (family or neighbour) can be followed up close.
-- **The family changes:** children grow into workers, people fall ill or die, an orphan may be taken in, a son is called to war in Act 3. Losing a family member hurts but play continues while anyone in the household survives.
+- **The family changes:** children grow into workers, people fall ill or die, an orphan may be taken in, a son is called to war before the last train. Losing a family member hurts but play continues while anyone in the household survives.
 
 #### A typical minute
 1. Zoomed out: the woodpile is low, a storm is forecast in 3 days, the Petrovs' chimney is cold.
@@ -185,7 +187,7 @@ Each neighbour household has:
 - A barter economy: food, firewood, tools, cloth, medicine, labour and favours
 - Value depends on season and scarcity (firewood is cheap in summer and precious in January)
 - Neighbours' willingness and prices depend on relationship, traits and their own needs
-- The train brings outside goods for coin, while it runs
+- The train brings outside goods for coin, while it runs. **After the last train, coin is worthless,** and the street's currency is goods and **favours that people remember** (§7.11)
 
 ### 7.4 Building
 The street already exists when the game starts. The player does not lay out a town; they **improve their own plot, keep it standing, and build with the street.** Building is about survival, not decoration.
@@ -227,9 +229,9 @@ Woodshed (keeps firewood dry), chicken coop, smokehouse (preserves meat and fish
 This is **the last street.** Every house that goes cold is one less family, one less pair of hands, one step closer to the street dying. The street feels that, and so should the player.
 
 When a neighbour household dies out or leaves, its house stands empty. The choices:
-- Help a **new family** move in (a new neighbour with their own traits and history). The street almost always prefers this.
+- Take in a **refugee family,** if one comes down the road (new neighbours with their own traits, skills and history). The street usually prefers this, but it means more mouths.
 - **Take over** the plot to expand your own (hard; see below)
-- **Salvage** it for materials (needs the street's consent, just like a takeover)
+- **Salvage** it for materials, or **burn it for fuel in a hard winter** (needs the street's consent, just like a takeover). Every empty home is both firewood and a grave, and the street visibly shrinks as you consume it
 - Leave it to decay as a visible scar on the street
 
 #### Taking over a plot
@@ -285,8 +287,22 @@ A director system that paces events based on how the street is doing:
 12. You find a neighbour stealing firewood from your shed.
 13. The street wants to send a young man to the city for supplies through the snow.
 14. A letter arrives for a neighbour who is away. It's bad news. Do you open it?
+15. The seed grain is all that's left. Eat it now, or go hungry to have a harvest next year?
+16. The last sack of salt: who gets it, and who loses their winter meat?
+17. The last good axe head breaks, or nearly does. Who gets the one that's left?
+18. A family's house has the fever. Board them in to save everyone else?
+19. The stove has died next door. Take them in, with their stores and their grudges?
+20. Tear down a house to make a firebreak while the street burns. Whose?
+21. Deserters at the end of the street, hungry and armed. Feed them, turn them away, or give them a place?
+22. Someone has been stealing from the common store, and you've known them for ten winters.
+23. Food is short, and two young people want to marry. Do you spend grain on a wedding?
+24. A privy is fouling the well. The family who owns it refuses to move it.
 
-### 7.8 Losing
+### 7.8 Winning and losing
+**You win when the street no longer needs the outside world and a child born there grows up** (§7.12 and §8). Then a train finally arrives, and the street decides whether to let it in.
+
+The street can also fail: too few people or skills remain for anyone to get through another winter.
+
 Family members can die. If the player's household is lost (decided):
 - **Story mode:** the game ends with a **summary of the story:** who helped, who betrayed you, what the street remembers
 - **Endless mode:** the player continues as a surviving neighbour
@@ -315,14 +331,14 @@ Systems arrive with the seasons, taught **by the neighbours** rather than pop-up
 #### Goals at three scales
 - **Short (today):** "Finish the woodshed roof before the rain."
 - **Medium (this season):** "Stockpile 40 days of firewood before winter."
-- **Long (this year and beyond):** "Build the root cellar." "Earn the Petrovs' trust." "Get everyone through the war."
+- **Long (this year and beyond):** "Build the root cellar." "Earn the Petrovs' trust." "Find a salt route before the sacks run out."
 
 Shown in a simple season goals panel.
 
 #### Difficulty curve
 - Year 1: a mild winter to learn from
 - Years 2–3: proper winters and the first disasters
-- Story acts raise pressure (rumours → war → sickness)
+- Story acts raise pressure (the last train, then shortages, then sickness)
 - The storyteller adjusts: breathing room for struggling players, tests for comfortable ones
 
 Target feeling: *"Last year I barely made it. This year I'm ready."* Then something new arrives.
@@ -342,21 +358,75 @@ Target feeling: *"Last year I barely made it. This year I'm ready."* Then someth
 - Losses that teach: the summary explains why ("the stove went cold on day 12")
 - Difficulty settings: **Story** (gentler, narrative-focused) and **Harsh** (for survival fans)
 
+### 7.10 The street as one body
+No household can cover everything. Each one holds a piece of what the street needs, and a new game reshuffles who holds what, so replays play differently.
+
+| Kind of thing held | Examples |
+|---|---|
+| **Places** | The only good well, the best cellar, the smokehouse |
+| **Animals** | The cow, the horse, the breeding sheep |
+| **Stocks** | The seed grain, the salt, the last tools |
+| **Skills** | Mending iron, carpentry, midwifery, fevers and herbs, weaving, hunting |
+
+**Losing someone costs the street what they held.** If the only person who can mend iron dies, broken tools stay broken. If one old woman is the only healer, then when she goes, so does what she knows.
+
+**Knowledge can be passed on, at a price.** An apprentice costs labour you can't spare today. Sending your daughter to learn from the old healer means one less pair of hands on the woodpile, and it only pays off if she survives.
+
+A person's value to the street is always visible on the relationship map, so the player can see who the street can't afford to lose.
+
+### 7.11 Favours and the pump
+- Money dies with the last train. **A ledger of favours, kept by each household,** replaces it. Who owes whom, for what, and whether it was paid back.
+- **The shared works** need everyone: the firebreak, the ice house, the common grain store, the night watch. Someone always shirks.
+- **Street meetings at the pump** decide shared questions: rationing, quarantine, who gets the last of something, whether to let strangers stay. The player has one voice, and its weight comes from street standing (§7.2). You persuade; you never command.
+
+### 7.12 Run out, then replace
+The last train starts a countdown on everything the street can't make. Each item has a way to replace it, and each replacement needs a skill, an animal, a plot of land or a journey.
+
+| From the old world | What replaces it |
+|---|---|
+| Lamp oil | Tallow candles, which need animals |
+| Matches | Keeping fires alive, and flint and steel |
+| Iron and nails | Charcoal and a working forge, reusing scrap; wooden pegs |
+| Salt | A salt route, which means a dangerous journey and trade with strangers |
+| Cloth | Flax and sheep, spinning and weaving |
+| Medicine | Herbs, and someone who learned how to use them |
+| Seed | Saving your own, every year, however hungry you are |
+| Glass | Shutters and oiled cloth |
+
+The street's self-sufficiency is a visible checklist. **Filling it is the long goal of the game.**
+
+### 7.13 What survival really demands
+These join food and firewood as simulated pressures.
+
+| Need | The real problem | The hard choice |
+|---|---|---|
+| **Heat** | Winter's wood must be cut and dried in summer | Cut wood or tend crops? |
+| **Water** | Privies foul wells, and boiling burns firewood | Whose well is safe? Who moves their privy? |
+| **Food** | Harvests come once a year; stores rot or get rats | Eat the seed grain, or starve now to eat next year? |
+| **Salt** | Nobody can make it, and without it there's no meat for winter | Who gets the last sack? |
+| **Tools** | Every break is permanent without a smith | Who gets the last good axe head? |
+| **Medicine and births** | Childbirth and fever are the big killers | The only quinine, your child or theirs? |
+| **Fire** | A wooden street can burn in one night | Tear down a house to make a firebreak? |
+| **Safety** | Deserters and refugees arrive hungry | Feed, turn away, or take them in? |
+| **Hope** | Despair stops people working | Spend scarce food on a wedding? |
+
 ---
 
 ## 8. Story Mode: The Five Acts
 
-The war is **fictional** and **always off-screen.** It happens *to* the street, never *on* it. No combat systems.
+The war is **fictional** and **always off-screen.** It's the reason the trains stop, and it never comes onto the street as a battle. No combat systems: threats are settled by the watch, bargains and standoffs.
+
+The arc is **running out, then replacing it** (§7.12).
 
 | Act | Years (in-game) | What changes |
 |---|---|---|
-| **1. The Good Years** | ~1900–1905 | Peaceful but hard winters. Learn farming, building, trading, the neighbours. |
-| **2. Rumours** | ~1906–1910 | Newspapers speak of tension abroad. Prices rise; the train comes less often. A young neighbour enlists. |
-| **3. The War Years** | — | Men are called away; households left with women, elderly and children. Rationing, scarcity, letters from the front, some with bad news. |
-| **4. The Sickness** | — | A pandemic sweeps through. Quarantine your family or nurse your neighbours? The hardest winter of the game. |
-| **5. Whoever Is Left** | — | The war ends. Survivors come home, changed. The street rebuilds, or doesn't, depending on everything that came before. |
+| **1. The Last Train** | 1–2 | The train comes less and less, then stops. Learn the seasons and the neighbours. It's the last chance to buy salt, nails and medicine with coin. A mild first winter. |
+| **2. Running Down** | 3–5 | Money is worthless. Stocks run out one at a time. The first deaths take skills with them. Deserters and refugees come down the road. |
+| **3. The Sickness** | 6–7 | Fever comes, and the wells may be why. Quarantine or nurse? The hardest winter of the game. |
+| **4. Making Do** | 8–11 | The street replaces what it lost, or doesn't: candles, charcoal, flax and sheep, a salt route. |
+| **5. The Train** | 12+ | The first child born after the last train grows up. Then a train finally arrives, and the street decides whether to let it in. |
 
-Target length: roughly 10–20 hours.
+Target length: roughly 15–25 hours. Later, quieter years can pass faster so the ending stays within reach (see §14).
 
 ### Endless mode
 A sandbox with random seasons, disasters and neighbour generation, for replayability (in the spirit of long-running colony sims).
@@ -377,14 +447,14 @@ A sandbox with random seasons, disasters and neighbour generation, for replayabi
 
 | Area | Choice |
 |---|---|
-| Engine | **Unreal Engine 5** (Lumen lighting, Nanite geometry) |
-| Gameplay code | **C++.** Blueprints only for thin visual hookups. |
+| Engine | **Unreal Engine 5,** newest stable 5.x (Lumen lighting, Nanite geometry), developed on Windows |
+| Gameplay code | **C++,** with game rules kept in the engine-free `core/`. Blueprints only for thin visual hookups. Unreal 6 is reported to drop Blueprints and Actors, so the less game logic depends on them, the better. |
 | Game data | Plain text (JSON/CSV): neighbours, traits, events, items, seasons, balance values |
 | Level building | **Python editor scripts** to generate terrain, place houses and scatter foliage |
 | Architecture | Simulation logic kept separate from visuals, so it can be built and balanced on its own |
 | Version control | Git with Git LFS for large binary assets |
 
-**Hardware/space needed:** Epic Games Launcher + UE5 (~100 GB free disk).
+**Development machine:** the Windows PC (i5-13600KF, RX 6700 XT, 16 GB RAM, more RAM later if the editor struggles). Epic Games Launcher + UE5 needs about 100 GB free disk.
 
 ---
 
@@ -416,21 +486,21 @@ Prove the look and camera in Unreal 5:
 
 **Success:** it looks like the concept art from above, and the zoom feels great.
 
-### Phase 1: Gameplay prototype (~4–6 weeks)
-**Simple shapes only** (boxes for houses, capsules for people). Prove the fun:
-- 1 player household (family of four) + 4 neighbour households
+### Phase 1: One year on the street
+Prove the fun with **one full year through one real winter:** six households in Unreal, placeholder people where needed.
+- 1 player household (family of four) + 5 neighbour households, about 25 people
 - Household control: daily plan, jobs, direct orders (§6)
-- Needs, traits, memory and relationships, with relationship levels
-- 4 seasons, a mild first winter and a hard second winter
-- Bartering
-- Building: 4–5 house upgrades, 3 outbuildings, repairs and condition, one street project (§7.4)
-- 10 dilemma events
-- A basic storyteller
-- First-year onboarding through a neighbour, season goals panel, end-of-winter summary (§7.9)
+- Needs, traits, memory, relationships and street standing
+- Each household holding a piece of what the street needs, and permanent loss (§7.10)
+- Favours, barter, and meetings at the pump (§7.11)
+- Water, salt, tools and the finite stocks, starting with the last train (§7.12, §7.13)
+- Building: a few house upgrades and outbuildings, repairs, one shared work (§7.4)
+- 10 dilemma events, fire, fever and a basic storyteller
+- Season goals panel and an end-of-winter summary (§7.9)
 
-**Not in the prototype:** family skills, carry-over unlocks, difficulty settings, empty-house choices, story acts.
+**Not in the prototype:** the replacement chains beyond one example, passing on skills beyond one example, the later acts, endless mode, carry-over unlocks, difficulty settings.
 
-**Success:** playing it, you want "one more winter." If it isn't fun with boxes, realistic art won't fix it.
+**Success:** when that winter ends, people argue about whether they did the right thing. If it doesn't do that, more content won't save it.
 
 ### Phase 2: Vertical slice (~3 months)
 One full year on the street at near-final quality. Steam page goes live; devlog clips begin.
@@ -469,7 +539,10 @@ Alternatives for trailers and other uses:
 - [x] Mood: hard but hopeful (§3)
 - [x] Losing: story mode ends with a summary; endless mode continues as a neighbour (§7.8)
 - [ ] Trademark check on "The Last Street" before launch
-- [ ] Development machine for Unreal 5. The current MacBook Air (M1, 8 GB RAM, ~54 GB free, no admin rights) is not enough for UE5.
+- [x] Development machine for Unreal 5: the Windows PC (§10)
+- [ ] How quickly years pass, so a child can grow up within the target length (§8)
+- [ ] The age at which a child born on the street counts as grown (§7.8)
+- [ ] The fifth neighbour household, and who holds what by default (§7.10)
 
 ### Name shortlist
 **Country:** Varnholm · Kaldria · Norrvik · Velmark · Hollvaen
